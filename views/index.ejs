@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Forge Data Management - Viewer</title>
+    <link rel="stylesheet" href="/css/jstree.style.min.css"/>
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+    <!--<link rel="stylesheet" href="https://developer-stg.api.autodesk.com/viewingservice/v1/viewers/style.css"-->
+    <!--type="text/css">-->
+    <script language="JavaScript" src="/js/jquery.min.js"></script>
+    <script language="JavaScript" src="/js/jquery.storageapi.min.js"></script>
+    <script language="JavaScript" src="/js/scripts.js"></script>
+    <script src="/js/jstree.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <!--<script src="https://developer-stg.api.autodesk.com/viewingservice/v1/viewers/viewer3D.js"></script>-->
+
+    <link rel="stylesheet" href="/css/index.css"/>
+</head>
+<body>
+<div class="container">
+    <div class="jumbotron">
+        <h2>Model Derivative API - Basic Node.js Sample</h2>
+        <h4>Show the entire list of
+            <span class="glyphicon glyphicon-inbox"></span> Hubs,
+            <span class="glyphicon glyphicon-list-alt"></span> Projects,
+            <span class="glyphicon glyphicon-folder-open"></span> Folders,
+            <span class="glyphicon glyphicon-briefcase"></span> Items and
+            <span class="glyphicon glyphicon-time"></span> Versions under your
+            account.</h4>
+        <h4>Select an item version to show a file using <a href="https://developer.autodesk.com/api/viewerapi/">
+                Autodesk Viewer</a>
+        </h4>
+        <div class="row forgeLogIn" style="  width:100%">
+            <div class="col-sm-3">
+
+                <a href="#" id="authenticate" class="btn btn-warning btn-block">
+                    <span class="glyphicon glyphicon-user"></span>
+                    Log In
+                </a>
+            </div>
+            <div class="col-sm-3" style="height:40px;">
+                <select id="env" class="input-small form-control" style="width:150px;">
+                    <option value="dev">Development</option>
+                    <option value="stg" selected>Staging</option>
+                    <option value="prod">Production</option>
+                </select>
+            </div>
+
+        </div>
+        <div class="row">
+            <div class="col-sm-9" style="height:40px">
+                <div id="progressInfo" class="btn btn-info" style="font-size: 10pt ">
+                    <span id="progressInfoText">Progress info</span>
+                    <span id="progressInfoIcon"></span>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="background: white">
+            <div class="col-sm-3 forgeTreeContainer">
+                <div id="forgeFiles">
+
+                </div>
+                <div id="forgeUpload" class="forgeControlContainer">
+                    <a id="upload" class="btn btn-warning">
+                        <span class="glyphicon glyphicon-open-file"></span>
+                        Upload file
+                    </a>
+                    <input type="file" id="forgeUploadHidden" name="file"/>
+                </div>
+            </div>
+            <div class="col-sm-4 forgeTreeContainer" style="position: relative">
+                <div id="forgeHierarchy" class="forgeControl"></div>
+                <div id="forgeFileOptions" class="forgeControlContainer" style="height:50px; overflow: hidden;">
+
+                    <div style="display: inline-block">
+                        <select id="forgeFormats" class="input-small form-control" style="width:90px">
+                        </select>
+                     </div>
+
+                    <div style="display: inline-block">
+                        <a id="downloadFile" class="btn btn-warning">
+                            <span class="glyphicon glyphicon-save-file"></span>
+                            Download
+                        </a>
+                    </div>
+
+                    <div style="display: inline-block">
+                        <a id="deleteManifest" class="btn btn-warning">
+                            <span class="glyphicon glyphicon-trash"></span>
+                            Delete
+                        </a>
+                    </div>
+                </div>
+                <div id="forgeProperties" class="forgeControl"></div>
+            </div>
+
+            <div class="col-sm-5 forgeViewer">
+                <div id="forgeViewer"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
