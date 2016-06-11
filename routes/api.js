@@ -69,7 +69,7 @@ router.get('/myfiles', function (req, res) {
 // Upload a file to our own bucket on OSS
 //
 /////////////////////////////////////////////////////////////////
-router.post('/upload', jsonParser, function (req, res) {
+router.post('/myfiles', jsonParser, function (req, res) {
     var fileName ='' ;
     var form = new formidable.IncomingForm () ;
 
@@ -117,14 +117,15 @@ router.post('/upload', jsonParser, function (req, res) {
                         // getBucket success
                         function() {
                             // Uploading the file
+                            var tmpFileName = path.join(dirName, fileName);
                             lmv.upload(
-                                path.join(dirName, fileName),
+                                tmpFileName,
                                 bucketName,
                                 fileName).then(
                                 // upload success
                                 function(uploadInfo){
                                     // Save info about the file
-
+                                    fileName = uploadInfo.objectKey;
                                     fs.mkdir(dirName, function(err) {
                                         if (err && err.code !== "EEXIST") {
                                             console.log ('Could not create folder for data file!');
@@ -139,7 +140,7 @@ router.post('/upload', jsonParser, function (req, res) {
                                                         console.log('Saved data file!');
                                                         // We can get rid of the original file now, the
                                                         // data file about it is enough
-                                                        fs.unlink(path.join(dirName, fileName), function(err) {
+                                                        fs.unlink(tmpFileName, function(err) {
                                                             if (err) {
                                                                 console.log ('Could not delete original file!') ;
                                                             }
@@ -175,6 +176,20 @@ router.post('/upload', jsonParser, function (req, res) {
     form.parse(req);
 });
 
+router.delete('/myfiles/:fileName', function (req, res) {
+    var bucketName = getBucketName(req);
+    var dirName = __dirname + "/data/" + bucketName;
+    var fileName = req.params.fileName;
+
+    fs.unlink(path.join(dirName, fileName + ".json"), function(err) {
+        if (err) {
+            console.log ('Could not delete original file!') ;
+        }
+
+        res.json({ result: "success"});
+    });
+});
+
 /////////////////////////////////////////////////////////////////
 // Get the list of export file formats supported by the
 // Model Derivative API
@@ -194,8 +209,9 @@ router.get('/formats', function (req, res) {
 // information about the various formats which are currently
 // available for this file
 /////////////////////////////////////////////////////////////////
-router.get('/manifest', function (req, res) {
-    md.getManifest(req.session.env, req.session.oauthcode, req.query.urn, function (data) {
+router.get('/manifests/:urn', function (req, res) {
+    var urn = req.params.urn;
+    md.getManifest(req.session.env, req.session.oauthcode, urn, function (data) {
         res.set('Content-Type', 'application/json; charset=utf-8');
         res.end(JSON.stringify(data));
     }, function (msg) {
@@ -204,8 +220,9 @@ router.get('/manifest', function (req, res) {
     );
 });
 
-router.delete('/manifest', function (req, res) {
-    md.delManifest(req.session.env, req.session.oauthcode, req.query.urn, function (data) {
+router.delete('/manifests/:urn', function (req, res) {
+    var urn = req.params.urn;
+    md.delManifest(req.session.env, req.session.oauthcode, urn, function (data) {
         res.set('Content-Type', 'application/json; charset=utf-8');
         res.end(JSON.stringify(data));
     }, function (msg) {
@@ -218,8 +235,9 @@ router.delete('/manifest', function (req, res) {
 // Get the metadata of the given file. This will provide us with
 // the guid of the avilable models in the file
 /////////////////////////////////////////////////////////////////
-router.get('/metadata', function (req, res) {
-    md.getMetadata(req.session.env, req.session.oauthcode, req.query.urn, function (data) {
+router.get('/metadatas/:urn', function (req, res) {
+    var urn = req.params.urn;
+    md.getMetadata(req.session.env, req.session.oauthcode, urn, function (data) {
         res.set('Content-Type', 'application/json; charset=utf-8');
         res.end(JSON.stringify(data));
     }, function (msg) {
@@ -369,22 +387,12 @@ router.post('/logoff', function (req, res) {
     res.end('ok');
 });
 
-router.get('/get3LegToken', function (req, res) {
-    // should be stored in session
-    //res.end(JSON.stringify(req.session.oauthcode || null));
-    if (req.session.oauthcode) {
-        res.end(req.session.oauthcode);
-    } else {
-        res.end("");
-    }
-});
-
 /////////////////////////////////////////////////////////////////
 // Provide information to the tree control on the client
 // about the hubs, projects, folders and files we have on
 // our A360 account
 /////////////////////////////////////////////////////////////////
-router.get('/getTreeNode', function (req, res) {
+router.get('/treeNode', function (req, res) {
     var href = req.query.href;
 
     if (href === '#' || href === '%23') {
@@ -432,7 +440,7 @@ router.get('/getTreeNode', function (req, res) {
 // where we interact directly with OSS - not with files on OSS
 // that we got from A360
 /////////////////////////////////////////////////////////////////
-router.get('/get2LegToken', function (req, res) {
+router.get('/2LegToken', function (req, res) {
     // ToDo: not sure what to return for LMV
     lmv.getToken().then(function (lmvRes) {
         //req.session.oauthcode = lmvRes.access_token;

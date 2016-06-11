@@ -35,14 +35,30 @@ $(document).ready(function () {
     var token = getToken();// get3LegToken();
     var auth = $("#authenticate");
 
+    // Delete uploaded file
+    $("#deleteFile").click(function(evt) {
+        $.ajax({
+            url: '/api/myfiles/' + encodeURIComponent(MyVars.fileName),
+            type: 'DELETE'
+        }).done(function (data) {
+            console.log(data);
+            var instance = $('#forgeFiles').jstree(true);
+            instance.delete_node(MyVars.selectedNode);//instance.get_selected());
+        }).fail(function(err) {
+            console.log('DELETE /api/myfiles call failed\n' + err.statusText);
+        });
+    });
+
+    // File upload button
     $("#forgeUploadHidden").change(function(evt) {
 
+        showProgress("Uploading file... ", "inprogress");
         var data = new FormData () ;
         var fileName = this.value;
         data.append (0, this.files[0]) ;
         $.ajax ({
-            url: '/api/upload',
-            type: 'post',
+            url: '/api/myfiles',
+            type: 'POST',
             headers: { 'x-file-name': fileName },
             data: data,
             cache: false,
@@ -53,12 +69,14 @@ $(document).ready(function () {
             console.log('Uploaded file "' + data.objectKey + '" with urn = ' + data.objectId);
 
             addToFilesTree(data.objectId, data.objectKey);
+            showProgress("Upload successful", "success");
         }).fail (function (xhr, ajaxOptions, thrownError) {
             alert(fileName + ' upload failed!') ;
+            showProgress("Upload failed", "failed");
         }) ;
     });
 
-    var upload = $("#upload").click(function(evt) {
+    var upload = $("#uploadFile").click(function(evt) {
         evt.preventDefault();
         $("#forgeUploadHidden").trigger("click");
     });
@@ -119,12 +137,6 @@ function base64encode(str) {
     return ret2;
 }
 
-function get3LegToken() {
-    var token = makeSyncRequest('/api/get3LegToken');
-    if (token != '') console.log('3 legged token (User Authorization): ' + token);
-    return token;
-}
-
 function getToken() {
     var token = makeSyncRequest('/api/token');
     if (token != '') console.log('Get current token: ' + token);
@@ -132,7 +144,7 @@ function getToken() {
 }
 
 function get2LegToken() {
-    var token = makeSyncRequest('/api/get2LegToken');
+    var token = makeSyncRequest('/api/2LegToken');
     console.log('2 legged token (Developer Authentication): ' + token);
     return token;
 }
@@ -313,9 +325,8 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
 function getMetadata(urn, onsuccess) {
     console.log("getMetadata for urn=" + urn);
     $.ajax({
-        url: '/api/metadata',
-        type: 'GET',
-        data: {urn: urn}
+        url: '/api/metadatas/' + urn,
+        type: 'GET'
     }).done(function (data) {
         console.log(data);
         json = JSON.parse(data);
@@ -392,9 +403,8 @@ function getProperties(urn, guid, onsuccess) {
 function getManifest(urn, onsuccess) {
     console.log("getManifest for urn=" + urn);
     $.ajax({
-        url: '/api/manifest',
-        type: 'GET',
-        data: {urn: urn}
+        url: '/api/manifests/' + urn,
+        type: 'GET'
     }).done(function (data) {
         console.log(data);
         json = JSON.parse(data);
@@ -418,6 +428,7 @@ function getManifest(urn, onsuccess) {
         // if it's a failed translation best thing is to delete it
         } else {
             showProgress("Translation failed", json.status);
+            // Should we do automatic manifest deletion in case of a failed one?
             //delManifest(urn, function () {});
         }
     }).fail(function(err) {
@@ -429,7 +440,7 @@ function getManifest(urn, onsuccess) {
 function delManifest(urn, onsuccess) {
     console.log("delManifest for urn=" + urn);
     $.ajax({
-        url: '/api/manifest?urn=' + urn,
+        url: '/api/manifests/' + urn,
         type: 'DELETE'
     }).done(function (data) {
         console.log(data);
@@ -512,7 +523,7 @@ function fillFormats() {
         var forgeFormats = $("#forgeFormats");
         forgeFormats.data("forgeFormats", data);
 
-        var download = $("#downloadFile");
+        var download = $("#downloadExport");
         download.click(function() {
             MyVars.keepTrying = true;
 
@@ -618,7 +629,7 @@ function prepareFilesTree() {
             'themes': {"icons": true},
             'check_callback': true, // make it modifiable
             'data': {
-                "url": '/api/getTreeNode',
+                "url": '/api/treeNode',
                 "dataType": "json",
                 "data": function (node) {
                     return {
@@ -657,12 +668,19 @@ function prepareFilesTree() {
     }).bind("select_node.jstree", function (evt, data) {
         // Disable the hierarchy related controls for the time being
         $("#forgeFormats").attr('disabled', 'disabled');
-        $("#downloadFile").attr('disabled', 'disabled');
+        $("#downloadExport").attr('disabled', 'disabled');
+
+        if (data.node.type === 'files') {
+            $("#deleteFile").removeAttr('disabled');
+        } else {
+            $("#deleteFile").attr('disabled', 'disabled');
+        }
 
         if (data.node.type === 'versions' || data.node.type === 'files') {
             $("#deleteManifest").removeAttr('disabled');
 
             MyVars.keepTrying = true;
+            MyVars.selectedNode = data.node;
 
             // E.g. because of the file upload we might have gotten a 2 legged
             // token, now we need a 3 legged again... ?
@@ -750,19 +768,16 @@ function addToFilesTree(objectId, fileName) {
     // fileName = e.g. myfile.ipt
     // storage = the objectId of the file
     var nameParts = fileName.split('.');
-    var extension = nameParts[nameParts.length - 1];
+    var oldExtension = nameParts[nameParts.length - 1];
+    var extension = oldExtension;
 
     // If it's a zip then we assume that the root file name
     // comes before the zip extension,
     // e.g. "scissors.iam.zip" >> "scissors.iam" is the root
-    if (extension === 'zip') {
-        // Remove 4 last characters ".zip"
-        fileName = fileName.slice(0, -4);
-    }
 
-    var myFileNode = $('#forgeFiles').jstree('get_node', "forgeFiles_myFiles");
-    if (!myFileNode) {
-        myFileNode = $('#forgeFiles').jstree('create_node', "#",
+    var myFileNodeId = $('#forgeFiles').jstree('get_node', "forgeFiles_myFiles");
+    if (!myFileNodeId) {
+        myFileNodeId = $('#forgeFiles').jstree('create_node', "#",
             {
                 id: "forgeFiles_myFiles",
                 text: "My Files",
@@ -771,14 +786,36 @@ function addToFilesTree(objectId, fileName) {
         );
     }
 
+    var myFileNode = $('#forgeFiles').jstree().get_node(myFileNodeId);
+    for (var childId in myFileNode.children) {
+        var childNodeId = myFileNode.children[childId];
+        var childNode = $('#forgeFiles').jstree().get_node(childNodeId);
+
+        // If this file is already listed then we've overwritten it on
+        // the server and so no need to add it to the tree
+        if (childNode.text === fileName) {
+            return;
+        }
+    }
+
+    var rootFileName = fileName;
+    if (extension === 'zip') {
+        rootFileName = fileName.slice(0, -4);
+        // If it's a zip and it has another extension
+        // then cut back to that
+        if (nameParts.length > 2) {
+            extension = nameParts[nameParts.length - 2];
+        }
+    }
+
     var newNode = $('#forgeFiles').jstree('create_node', "forgeFiles_myFiles",
         {
             text: fileName,
             type: "files",
             fileType: extension,
-            fileExtType: (extension === 'zip' ?
+            fileExtType: (oldExtension === 'zip' ?
                 'versions:autodesk.a360:CompositeDesign' : 'versions:autodesk.a360:File'),
-            fileName: fileName,
+            fileName: rootFileName,
             storage: objectId
         }, "last"
     );
@@ -855,7 +892,7 @@ function prepareHierarchyTree(urn, guid, json) {
 
     // Enable the hierarchy related controls
     $("#forgeFormats").removeAttr('disabled');
-    $("#downloadFile").removeAttr('disabled');
+    $("#downloadExport").removeAttr('disabled');
 
     // Store info of selected item
     MyVars.selectedUrn = urn;

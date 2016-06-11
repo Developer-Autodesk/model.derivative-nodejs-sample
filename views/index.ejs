@@ -62,10 +62,18 @@
 
                 </div>
                 <div id="forgeUpload" class="forgeControlContainer">
-                    <a id="upload" class="btn btn-warning">
-                        <span class="glyphicon glyphicon-open-file"></span>
-                        Upload file
-                    </a>
+                    <div style="display: inline-block">
+                        <a id="uploadFile" class="btn btn-warning">
+                            <span class="glyphicon glyphicon-open-file"></span>
+                            Upload
+                        </a>
+                    </div>
+                    <div style="display: inline-block">
+                        <a id="deleteFile" class="btn btn-warning">
+                            <span class="glyphicon glyphicon-trash"></span>
+                            Delete
+                        </a>
+                    </div>
                     <input type="file" id="forgeUploadHidden" name="file"/>
                 </div>
             </div>
@@ -79,7 +87,7 @@
                      </div>
 
                     <div style="display: inline-block">
-                        <a id="downloadFile" class="btn btn-warning">
+                        <a id="downloadExport" class="btn btn-warning">
                             <span class="glyphicon glyphicon-save-file"></span>
                             Download
                         </a>
