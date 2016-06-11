@@ -35,7 +35,7 @@ Here is some info on how to modify your "hosts" file: [https://support.rackspace
 ```
 PROD_CONSUMERKEY=<your cosumer key> PROD_CONSUMERSECRET=<your consumer secret key>
 CALLBACK_URL='http://dev.example.com:8000/api/autodesk/callback' node index.js
-```
+```  
 
 6. Now you can run the app by executing the following in the terminal  
 `node index.js`   
@@ -44,13 +44,15 @@ CALLBACK_URL='http://dev.example.com:8000/api/autodesk/callback' node index.js
 
 ## Usage
 
-**You need to have an A360 account on the appropriate server (PROD, STG or DEV) - this sample is for STG at the moment so go to [https://myhub.staging.autodesk360.com/](https://myhub.staging.autodesk360.com/) to make sure you have a registered account before trying to use the sample**
+**You need to have an A360 account on the appropriate server (PROD, STG or DEV) - go to [https://myhub.autodesk360.com/](https://myhub.autodesk360.com/) to make sure you have a registered account before trying to use the sample**
 
 1. Click the "SIGN IN" button and provide your A360 credentials
 2. Once the hubs and projects are shown in the browser tree on the left, drill down into the content to find a file you are interested in and select its version (the item with a clock icon)
 3. The selected file's content hierarchy will appear in the middle browser tree - and it will also be shown in the viewer on the right
 4. You can click on any model part and that will trigger the translation of it to an OBJ file
 5. When you clicked an item, its name in the tree will change based on the translation progress. You have to keep clicking to get an update on the translation status. If the translation is finished by the time you click the item again, then the OBJ file will get downloaded to your computer
+
+You can also upload files to the web app's own bucket storage to use the **Model Derivative API** on them, just click the `Upload file` button. In case of uploading composite designs which consist of multiple components like an **Inventor** assembly and its parts, then the **zip** file's name needs to be the following: `<root design file's name'>.zip` - e.g. `scissors.iam.zip`  
 
 Here is a video showing it in action: [http://www.youtube.com/watch?v=0o7o7NA69qk](http://www.youtube.com/watch?v=0o7o7NA69qk)
 

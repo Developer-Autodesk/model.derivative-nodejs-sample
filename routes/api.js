@@ -25,11 +25,14 @@ var md = require("./md"); // Model Derivative API
 router.get('/myfiles', function (req, res) {
     var datas = [];
     var asyncTasks = [];
+    var bucketName = getBucketName(req);
+    var dirName = __dirname + "/data/" + bucketName;
     fs.readdir(
-        path.join(__dirname, '/data/'),
+        dirName,
         function (err, files) {
             if (err) {
                 res.status(500).end('Could not read /data folder!');
+                return;
             }
 
             // Iterate the files and set up parallel reads
@@ -38,14 +41,14 @@ router.get('/myfiles', function (req, res) {
                 (function (file) {
                     if (file.endsWith('.json')) {
                         asyncTasks.push(function (callback) {
-                            var filePath = path.join(__dirname, '/data/', file);
+                            var filePath = path.join(dirName, file);
                             fs.readFile(filePath, function (err, buffer) {
                                 if (!err) {
                                     var json = JSON.parse(buffer)
                                     datas.push(json);
                                     callback();
                                 } else {
-                                    res.status(500).end('Could not read file ' + file);
+                                    console.log ('Could not read file ' + file);
                                 }
                             });
                         });
@@ -54,7 +57,7 @@ router.get('/myfiles', function (req, res) {
             }
 
             // Get back all the results
-            async.parallel(asyncTasks, function() {
+            async.parallel(asyncTasks, function(err) {
                 // All tasks are done now
                 res.json(datas);
             });
@@ -69,7 +72,21 @@ router.get('/myfiles', function (req, res) {
 router.post('/upload', jsonParser, function (req, res) {
     var fileName ='' ;
     var form = new formidable.IncomingForm () ;
-    form.uploadDir ='routes/data' ;
+
+    // Make sure the folder for the data exists
+    var bucketName = getBucketName(req);
+    var dirName = __dirname + "/data/" + bucketName;
+
+    fs.mkdir(dirName, function(err) {
+        if (err) {
+            console.log ("Failed to create folder");
+        } else {
+            console.log ("Folder created");
+        }
+    });
+
+    form.uploadDir ='routes/data/' + bucketName;
+
     form
         .on ('field', function (field, value) {
             console.log (field, value) ;
@@ -86,7 +103,7 @@ router.post('/upload', jsonParser, function (req, res) {
             }
             // Now upload it to OSS
             var bucketCreationData = {
-                bucketKey: config.defaultBucketKey,
+                bucketKey: bucketName,
                 servicesAllowed: {},
                 policyKey: 'transient'
             };
@@ -96,49 +113,66 @@ router.post('/upload', jsonParser, function (req, res) {
                 // initialize success
                 function() {
                     // Getting the bucket
-                    lmv.getBucket(config.defaultBucketKey, true, bucketCreationData).then(
+                    lmv.getBucket(bucketName, true, bucketCreationData).then(
                         // getBucket success
                         function() {
                             // Uploading the file
                             lmv.upload(
-                                path.join(__dirname, '/data/', fileName),
-                                config.defaultBucketKey,
+                                path.join(dirName, fileName),
+                                bucketName,
                                 fileName).then(
                                 // upload success
                                 function(uploadInfo){
                                     // Save info about the file
-                                    fs.writeFile(
-                                        __dirname + "/data/" + fileName + ".json",
-                                        JSON.stringify(uploadInfo),
-                                        function (err) {
-                                            console.log ('Could not save data file!') ;
+
+                                    fs.mkdir(dirName, function(err) {
+                                        if (err && err.code !== "EEXIST") {
+                                            console.log ('Could not create folder for data file!');
+                                        } else {
+                                            fs.writeFile(
+                                                path.join(dirName, fileName + ".json"),
+                                                JSON.stringify(uploadInfo),
+                                                function (err) {
+                                                    if (err) {
+                                                        console.log('Could not save data file!');
+                                                    } else {
+                                                        console.log('Saved data file!');
+                                                        // We can get rid of the original file now, the
+                                                        // data file about it is enough
+                                                        fs.unlink(path.join(dirName, fileName), function(err) {
+                                                            if (err) {
+                                                                console.log ('Could not delete original file!') ;
+                                                            }
+                                                        });
+                                                    }
+                                                }
+                                            );
                                         }
-                                    );
+                                    });
 
                                     // Send back the data
                                     res.json(uploadInfo);
                                 },
                                 // upload error
-                                function(res) {
+                                function(err) {
                                     res.status(500).end('Could not upload file into bucket!');
                                 }
                             );
                         },
                         // getBucket error
-                        function(res) {
+                        function(err) {
                             res.status(500).end('Could not create bucket for file!');
                         }
                     );
                 },
                 // initialize error
-                function (res) {
+                function (err) {
                     res.status(500).end('Could not get access token!');
                 }
             );
-        })
-    ;
-    form.parse(req);
+        });
 
+    form.parse(req);
 });
 
 /////////////////////////////////////////////////////////////////
@@ -311,7 +345,12 @@ router.post('/authenticate', jsonParser, function (req, res) {
                 if (results) {
                     req.session.oauthcode = access_token;
                     req.session.cookie.maxAge = parseInt(results.expires_in) * 6000;
-                    res.end('<script>window.opener.location.reload(false);window.close();</script>');
+                    dm.getUsersMe(req.session.env, req.session.oauthcode, function(data) {
+                        // We need this because each users file upload info
+                        // will be stored in their "env + userId" named folder
+                        req.session.userId = data.userId;
+                        res.end('<script>window.opener.location.reload(false);window.close();</script>');
+                    });
                 } else {
                     res.status(500).end(e.data);
                 }
@@ -460,4 +499,14 @@ function makeTree(listOf, canHaveChildren, data) {
         treeList.push(treeItem);
     });
     return JSON.stringify(treeList);
+}
+
+function getBucketName(req) {
+    // userId is supposed to be just numbers, but just to be safe
+    // since bucket names can only be lower case letters...
+    var consumerKey = config.credentials.consumerKey(req.session.env).toLowerCase();
+    var env = req.session.env;
+    var userId = req.session.userId.toLowerCase();
+
+    return consumerKey + env + userId;
 }

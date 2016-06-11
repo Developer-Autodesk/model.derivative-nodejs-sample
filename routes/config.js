@@ -5,10 +5,11 @@ var MD_PROJECT_VERSION = 'v2'; // Model Derivative
 module.exports = {
     redirectUrl: process.env.CALLBACK_URL,
 
-    defaultBucketKey: "adamnagy-20160604",
+    defaultBucketKey: "adamnagy-20160611",
 
     authenticationUrl: '/authentication/' + OAUTH_VERSION + '/authorize',
     accessTokenUrl: '/authentication/' + OAUTH_VERSION + '/gettoken',
+    usersMe:  '/userprofile/' + OAUTH_VERSION + '/users/@me',
 
     scope: 'data:read data:create data:write bucket:read bucket:create',
 
@@ -37,6 +38,7 @@ module.exports = {
     itemVersions: function (projectId, itemId) {
         return '/data/' + DM_PROJECT_VERSION + '/projects/' + projectId + '/items/' + itemId + '/versions';
     },
+
 
     //thumbail: function (urn) {
     //    return '/viewingservice/' + DM_PROJECT_VERSION + '/thumbnails/' + urn;

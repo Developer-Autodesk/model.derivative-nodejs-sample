@@ -749,7 +749,16 @@ function addToFilesTree(objectId, fileName) {
     // fileExtType = versions:autodesk.a360:CompositeDesign or not
     // fileName = e.g. myfile.ipt
     // storage = the objectId of the file
-    var extension = fileName.split('.')[1];
+    var nameParts = fileName.split('.');
+    var extension = nameParts[nameParts.length - 1];
+
+    // If it's a zip then we assume that the root file name
+    // comes before the zip extension,
+    // e.g. "scissors.iam.zip" >> "scissors.iam" is the root
+    if (extension === 'zip') {
+        // Remove 4 last characters ".zip"
+        fileName = fileName.slice(0, -4);
+    }
 
     var myFileNode = $('#forgeFiles').jstree('get_node', "forgeFiles_myFiles");
     if (!myFileNode) {
@@ -758,11 +767,6 @@ function addToFilesTree(objectId, fileName) {
                 id: "forgeFiles_myFiles",
                 text: "My Files",
                 type: "hubs",
-                fileType: extension,
-                fileExtType: (extension === 'zip' ?
-                    'versions:autodesk.a360:CompositeDesign' : 'versions:autodesk.a360:File'),
-                fileName: fileName,
-                storage: objectId
             }, "last"
         );
     }

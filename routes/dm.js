@@ -56,6 +56,12 @@ module.exports = {
         }, function (error, response, body) {
             onsuccess(new Buffer(body, 'base64'));
         });
+    },
+    getUsersMe: function (env, token, onsuccess) {
+        console.log('getUsersMe with token ' + token);
+        makeRequest(config.usersMe, env, token, function (body) {
+            onsuccess(body);
+        });
     }
 }
 
