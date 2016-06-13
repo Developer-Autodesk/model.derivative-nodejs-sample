@@ -1,4 +1,5 @@
 var OAUTH_VERSION = 'v1'; // Authentication
+var OSS_VERSION = 'v2'; // OSS storage system
 var DM_PROJECT_VERSION = 'v1'; // Data Management
 var MD_PROJECT_VERSION = 'v2'; // Model Derivative
 
@@ -38,11 +39,15 @@ module.exports = {
     itemVersions: function (projectId, itemId) {
         return '/data/' + DM_PROJECT_VERSION + '/projects/' + projectId + '/items/' + itemId + '/versions';
     },
-
-
-    //thumbail: function (urn) {
-    //    return '/viewingservice/' + DM_PROJECT_VERSION + '/thumbnails/' + urn;
-    //},
+    objectsInBucket: function (bucketKey) {
+        return '/oss/' + OSS_VERSION + '/buckets/' + bucketKey + '/objects';
+    },
+    objectDetails: function (bucketKey, objectName) {
+        return '/oss/' + OSS_VERSION + '/buckets/' + bucketKey + '/objects/' + objectName + "/details";
+    },
+    object: function (bucketKey, objectName) {
+        return '/oss/' + OSS_VERSION + '/buckets/' + bucketKey + '/objects/' + objectName;
+    },
 
     job: '/modelderivative/' + MD_PROJECT_VERSION + '/designdata/job',
     formats: '/modelderivative/' + MD_PROJECT_VERSION + '/designdata/formats',

@@ -23,46 +23,30 @@ var md = require("./md"); // Model Derivative API
 // to our own bucket on OSS
 /////////////////////////////////////////////////////////////////
 router.get('/myfiles', function (req, res) {
-    var datas = [];
-    var asyncTasks = [];
     var bucketName = getBucketName(req);
-    var dirName = __dirname + "/data/" + bucketName;
-    fs.readdir(
-        dirName,
-        function (err, files) {
-            if (err) {
-                res.status(500).end('Could not read /data folder!');
-                return;
-            }
-
-            // Iterate the files and set up parallel reads
-            for (fileId in files) {
-                var file = files[fileId];
-                (function (file) {
-                    if (file.endsWith('.json')) {
-                        asyncTasks.push(function (callback) {
-                            var filePath = path.join(dirName, file);
-                            fs.readFile(filePath, function (err, buffer) {
-                                if (!err) {
-                                    var json = JSON.parse(buffer)
-                                    datas.push(json);
-                                    callback();
-                                } else {
-                                    console.log ('Could not read file ' + file);
-                                }
-                            });
-                        });
-                    }
-                })(file);
-            }
-
-            // Get back all the results
-            async.parallel(asyncTasks, function(err) {
-                // All tasks are done now
-                res.json(datas);
-            });
+    bucketName = encodeURIComponent(bucketName);
+    dm.getObjectsInBucket(req.session.env, req.session.oauthcode, bucketName, function(data) {
+        var datas = [];
+        var asyncTasks = [];
+        for (var key in data.items) {
+            var obj = data.items[key];
+            (function (objectKey) {
+                asyncTasks.push(function (callback) {
+                    objectKey = encodeURIComponent(objectKey);
+                    dm.getObjectDetails(req.session.env, req.session.oauthcode, bucketName, objectKey, function(data) {
+                        datas.push(data);
+                        callback();
+                    });
+                });
+            })(obj.objectKey);
         }
-    );
+
+        // Get back all the results
+        async.parallel(asyncTasks, function(err) {
+            // All tasks are done now
+            res.json(datas);
+        });
+    });
 });
 
 /////////////////////////////////////////////////////////////////
@@ -75,17 +59,9 @@ router.post('/myfiles', jsonParser, function (req, res) {
 
     // Make sure the folder for the data exists
     var bucketName = getBucketName(req);
-    var dirName = __dirname + "/data/" + bucketName;
 
-    fs.mkdir(dirName, function(err) {
-        if (err) {
-            console.log ("Failed to create folder");
-        } else {
-            console.log ("Folder created");
-        }
-    });
-
-    form.uploadDir ='routes/data/' + bucketName;
+    // Only this folder works on heroku
+    form.uploadDir = '/tmp';
 
     form
         .on ('field', function (field, value) {
@@ -117,40 +93,13 @@ router.post('/myfiles', jsonParser, function (req, res) {
                         // getBucket success
                         function() {
                             // Uploading the file
-                            var tmpFileName = path.join(dirName, fileName);
+                            var tmpFileName = path.join(form.uploadDir, fileName);
                             lmv.upload(
                                 tmpFileName,
                                 bucketName,
                                 fileName).then(
                                 // upload success
                                 function(uploadInfo){
-                                    // Save info about the file
-                                    fileName = uploadInfo.objectKey;
-                                    fs.mkdir(dirName, function(err) {
-                                        if (err && err.code !== "EEXIST") {
-                                            console.log ('Could not create folder for data file!');
-                                        } else {
-                                            fs.writeFile(
-                                                path.join(dirName, fileName + ".json"),
-                                                JSON.stringify(uploadInfo),
-                                                function (err) {
-                                                    if (err) {
-                                                        console.log('Could not save data file!');
-                                                    } else {
-                                                        console.log('Saved data file!');
-                                                        // We can get rid of the original file now, the
-                                                        // data file about it is enough
-                                                        fs.unlink(tmpFileName, function(err) {
-                                                            if (err) {
-                                                                console.log ('Could not delete original file!') ;
-                                                            }
-                                                        });
-                                                    }
-                                                }
-                                            );
-                                        }
-                                    });
-
                                     // Send back the data
                                     res.json(uploadInfo);
                                 },
@@ -178,14 +127,11 @@ router.post('/myfiles', jsonParser, function (req, res) {
 
 router.delete('/myfiles/:fileName', function (req, res) {
     var bucketName = getBucketName(req);
-    var dirName = __dirname + "/data/" + bucketName;
     var fileName = req.params.fileName;
 
-    fs.unlink(path.join(dirName, fileName + ".json"), function(err) {
-        if (err) {
-            console.log ('Could not delete original file!') ;
-        }
-
+    bucketName = encodeURIComponent(bucketName);
+    fileName = encodeURIComponent(fileName);
+    dm.deleteObject(req.session.env, req.session.oauthcode, bucketName, fileName, function(data) {
         res.json({ result: "success"});
     });
 });

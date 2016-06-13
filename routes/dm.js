@@ -57,11 +57,37 @@ module.exports = {
             onsuccess(new Buffer(body, 'base64'));
         });
     },
+
     getUsersMe: function (env, token, onsuccess) {
         console.log('getUsersMe with token ' + token);
         makeRequest(config.usersMe, env, token, function (body) {
             onsuccess(body);
         });
+    },
+    getObjectsInBucket: function (env, token, bucketKey, onsuccess) {
+        console.log('getObjectsInBucket with token ' + token);
+        makeRequest(config.objectsInBucket(bucketKey), env, token, function (body) {
+            onsuccess(body);
+        });
+    },
+    getObjectDetails: function (env, token, bucketKey, objectName, onsuccess) {
+        console.log('getObjectsInBucket with token ' + token);
+        makeRequest(config.objectDetails(bucketKey, objectName), env, token, function (body) {
+            onsuccess(body);
+        });
+    },
+    deleteObject: function (env, token, bucketKey, objectName, onsuccess) {
+        console.log('deleteObject with token ' + token);
+        request({
+            url: config.baseURL(env) + config.object(bucketKey, objectName),
+            method: "DELETE",
+            headers: {'Authorization': 'Bearer ' + token}
+        }, function (error, response, body) {
+            if (error != null) console.log(error); // connection problems
+            if (body.errors != null)console.log(body.errors);
+
+            onsuccess(body);
+        })
     }
 }
 

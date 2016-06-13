@@ -43,7 +43,7 @@ $(document).ready(function () {
         }).done(function (data) {
             console.log(data);
             var instance = $('#forgeFiles').jstree(true);
-            instance.delete_node(MyVars.selectedNode);//instance.get_selected());
+            instance.delete_node(MyVars.selectedNode);
         }).fail(function(err) {
             console.log('DELETE /api/myfiles call failed\n' + err.statusText);
         });
@@ -536,7 +536,7 @@ function fillFormats() {
             var urn = MyVars.selectedUrn;
             var guid = MyVars.selectedGuid;
             var fileName = rootNode.text + "." + format;
-            var rootFileName = MyVars.fileName;
+            var rootFileName = MyVars.rootFileName;
             var nodeIds = elem.jstree("get_checked",null,true);
             //nodeIds = getOnlyParents(nodeIds);
 
@@ -702,6 +702,7 @@ function prepareFilesTree() {
             updateFormats(data.node.original.fileType);
 
             // Store info on selected file
+            MyVars.rootFileName = data.node.original.rootFileName;
             MyVars.fileName = data.node.original.fileName;
             MyVars.fileExtType = data.node.original.fileExtType;
             MyVars.selectedUrn = base64encode(data.node.original.storage);
@@ -712,7 +713,7 @@ function prepareFilesTree() {
                 MyVars.selectedUrn,
                 null,
                 null,
-                MyVars.fileName,
+                MyVars.rootFileName,
                 MyVars.fileExtType
             );
             console.log(
@@ -746,6 +747,8 @@ function prepareFilesTree() {
 }
 
 function getMyFiles () {
+    useToken(MyVars.token2Leg);
+
     var ret = $.ajax({
         url: '/api/myfiles',
         type: 'GET'
@@ -815,7 +818,8 @@ function addToFilesTree(objectId, fileName) {
             fileType: extension,
             fileExtType: (oldExtension === 'zip' ?
                 'versions:autodesk.a360:CompositeDesign' : 'versions:autodesk.a360:File'),
-            fileName: rootFileName,
+            fileName: fileName,
+            rootFileName: rootFileName,
             storage: objectId
         }, "last"
     );
