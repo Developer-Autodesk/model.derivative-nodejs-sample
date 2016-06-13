@@ -444,6 +444,7 @@ function makeTree(listOf, canHaveChildren, data) {
             data: (item.relationships != null && item.relationships.derivatives != null ? item.relationships.derivatives.data.id : null),
             text: (item.attributes.displayName == null ? item.attributes.name : item.attributes.displayName),
             fileName: (item.attributes ? item.attributes.name : null),
+            rootFileName: (item.attributes ? item.attributes.name : null),
             fileExtType: (item.attributes && item.attributes.extension ? item.attributes.extension.type : null),
             fileType: (item.attributes ? item.attributes.fileType : null),
             type: item.type,
