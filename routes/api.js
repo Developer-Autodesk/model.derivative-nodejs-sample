@@ -25,7 +25,8 @@ var md = require("./md"); // Model Derivative API
 router.get('/myfiles', function (req, res) {
     var bucketName = getBucketName(req);
     bucketName = encodeURIComponent(bucketName);
-    dm.getObjectsInBucket(req.session.env, req.session.oauthcode, bucketName, function(data) {
+    // This should always use 2legged token
+    dm.getObjectsInBucket(req.session.env, req.session.oauthcode2, bucketName, function(data) {
         var datas = [];
         var asyncTasks = [];
         for (var key in data.items) {
@@ -33,7 +34,8 @@ router.get('/myfiles', function (req, res) {
             (function (objectKey) {
                 asyncTasks.push(function (callback) {
                     objectKey = encodeURIComponent(objectKey);
-                    dm.getObjectDetails(req.session.env, req.session.oauthcode, bucketName, objectKey, function(data) {
+                    // This should always use 2legged token
+                    dm.getObjectDetails(req.session.env, req.session.oauthcode2, bucketName, objectKey, function(data) {
                         datas.push(data);
                         callback();
                     });
@@ -308,15 +310,19 @@ router.post('/authenticate', jsonParser, function (req, res) {
                 console.log(results);
                 if (results) {
                     req.session.oauthcode = access_token;
+                    req.session.oauthcode3 = access_token;
                     req.session.cookie.maxAge = parseInt(results.expires_in) * 6000;
                     dm.getUsersMe(req.session.env, req.session.oauthcode, function(data) {
                         // We need this because each users file upload info
                         // will be stored in their "env + userId" named folder
                         req.session.userId = data.userId;
+                        console.log("Got userId = " + data.userId);
                         res.end('<script>window.opener.location.reload(false);window.close();</script>');
+                        return;
                     });
                 } else {
                     res.status(500).end(e.data);
+                    return;
                 }
             }
         );
@@ -340,6 +346,7 @@ router.post('/logoff', function (req, res) {
 /////////////////////////////////////////////////////////////////
 router.get('/treeNode', function (req, res) {
     var href = req.query.href;
+    console.log("treeNode for " + href);
 
     if (href === '#' || href === '%23') {
         // # stands for ROOT
@@ -389,7 +396,7 @@ router.get('/treeNode', function (req, res) {
 router.get('/2LegToken', function (req, res) {
     // ToDo: not sure what to return for LMV
     lmv.getToken().then(function (lmvRes) {
-        //req.session.oauthcode = lmvRes.access_token;
+        req.session.oauthcode2 = lmvRes.access_token;
         res.send(lmvRes.access_token);
     });
 });

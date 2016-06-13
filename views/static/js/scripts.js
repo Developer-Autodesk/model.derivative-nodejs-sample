@@ -624,6 +624,7 @@ function updateFormats(format) {
 /////////////////////////////////////////////////////////////////
 
 function prepareFilesTree() {
+    console.log("prepareFilesTree");
     $('#forgeFiles').jstree({
         'core': {
             'themes': {"icons": true},
@@ -747,9 +748,6 @@ function prepareFilesTree() {
 }
 
 function getMyFiles () {
-    console.log("getMyFiles");
-    useToken(MyVars.token2Leg);
-
     console.log("getMyFiles calling /api/myfiles");
     var ret = $.ajax({
         url: '/api/myfiles',
