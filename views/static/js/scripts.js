@@ -595,6 +595,8 @@ function fillFormats() {
             var elem = $("#forgeHierarchy");
             var urn = MyVars.selectedUrn;
 
+            cleanupViewer();
+
             delManifest(urn, function() { });
         });
     });
@@ -667,6 +669,9 @@ function prepareFilesTree() {
         },
         "plugins": ["types", "state"] // let's not use sort: , "sort"]
     }).bind("select_node.jstree", function (evt, data) {
+        // Clean up previous instance
+        cleanupViewer();
+
         // Disable the hierarchy related controls for the time being
         $("#forgeFormats").attr('disabled', 'disabled');
         $("#downloadExport").attr('disabled', 'disabled');
@@ -1028,12 +1033,17 @@ function preparePropertyTree(urn, guid, objectId, props) {
 // https://developer.autodesk.com/api/viewerapi/
 /////////////////////////////////////////////////////////////////
 
-function initializeViewer(urn) {
+function cleanupViewer() {
     // Clean up previous instance
     if (MyVars.viewer) {
         MyVars.viewer.finish();
         $('#forgeViewer').html('');
+        MyVars.viewer = null;
     }
+}
+
+function initializeViewer(urn) {
+    cleanupViewer();
 
     // Get environment
     var env = $("#env").val();

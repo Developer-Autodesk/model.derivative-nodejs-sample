@@ -445,6 +445,14 @@ function makeTree(listOf, canHaveChildren, data) {
     if (!listOf) return '';
     var treeList = [];
     listOf.forEach(function (item, index) {
+        var fileExt = (item.attributes ? item.attributes.fileType : null);
+        if (!fileExt && item.attributes && item.attributes.name) {
+            var fileNameParts = item.attributes.name.split('.');
+            if (fileNameParts.length > 1) {
+                fileExt = fileNameParts[fileNameParts.length - 1];
+            }
+        }
+
         var treeItem = {
             href: item.links.self.href,
             storage: (item.relationships != null && item.relationships.storage != null ? item.relationships.storage.data.id : null),
@@ -453,7 +461,7 @@ function makeTree(listOf, canHaveChildren, data) {
             fileName: (item.attributes ? item.attributes.name : null),
             rootFileName: (item.attributes ? item.attributes.name : null),
             fileExtType: (item.attributes && item.attributes.extension ? item.attributes.extension.type : null),
-            fileType: (item.attributes ? item.attributes.fileType : null),
+            fileType: fileExt,
             type: item.type,
             children: canHaveChildren
         };
