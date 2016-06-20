@@ -94,14 +94,31 @@ module.exports = {
 
     getDownload: function (env, token, urn, derUrn, onsuccess, onerror) {
         derUrn = encodeURIComponent(derUrn);
-        makeRequest(config.download(urn, derUrn), env, token, "GET", null,
-            function (body, headers) {
-                onsuccess(body, headers);
-            }, function (msg) {
-                onerror(msg);
+        request({
+            url: config.baseURL(env) + config.download(urn, derUrn),
+            method: 'GET',
+            encoding: null,
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+        }, function (error, response, body) {
+            if (error) {
+                console.log(error);
+                onerror(error);
+                return;
             }
-        );
+
+            if (response && [200, 201].indexOf(response.statusCode) < 0) {
+                console.log(response.statusMessage);
+                onerror(response.statusMessage);
+                return;
+            }
+
+            console.log(body);
+            onsuccess(body, response.headers);
+        })
     },
+
 
     postJobExport: function (env, token, urn, format, rootFileName, fileExtType, advanced, onsuccess, onerror) {
         var item = {
