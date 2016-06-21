@@ -27,14 +27,14 @@ Just go to this address, download it and install it: [https://nodejs.org/en/](ht
 More info on how to do it: [https://docs.npmjs.com/cli/install](https://docs.npmjs.com/cli/install)
 
 4. There were some changes concerning scopes which are not yet reflected in the `view-and-data` npm pckage used by this project. So for the time being the solution is to open `/node_modules/view-and-data/view-and-data.js` and add the scope info to the `params` variable in the `getToken` function like so:  
-```
-var params = {
+  ```
+  var params = {
       client_secret: config.credentials.ConsumerSecret,
       client_id: config.credentials.ConsumerKey,
       grant_type: 'client_credentials',
       scope: 'data:read data:create data:write bucket:read bucket:create'
     };
-```  
+  ```  
 
 5. Add this line in your computer's `/etc/hosts` file: `127.0.0.1	dev.example.com`  
 Here is some info on how to modify your "hosts" file: [https://support.rackspace.com/how-to/modify-your-hosts-file/](https://support.rackspace.com/how-to/modify-your-hosts-file/)
@@ -42,13 +42,13 @@ Here is some info on how to modify your "hosts" file: [https://support.rackspace
 6. Set the Consumer Key, Consumer Secret keys and the Calllback URL of your app for the project. You could do it in multiple ways, but two of them are:  
   a. Set the `consumerKey` and `consumerSecret` values in the `config-<env>.js` file that corresponds to the environment (PROD/STG/DEV) that you are testing in, plus set the `redirectUrl` in the config.js file  
   b. Set the `CALLBACK_URL`, `PROD_CONSUMERKEY` and `PROD_CONSUMERSECRET` environment variables. You could do that e.g. by setting them when running the server app from the terminal like this:  
-```
-PROD_CONSUMERKEY=<your cosumer key> PROD_CONSUMERSECRET=<your consumer secret key>
-CALLBACK_URL='http://dev.example.com:8000/api/autodesk/callback' node index.js
-```  
+  ```
+  PROD_CONSUMERKEY=<your cosumer key> PROD_CONSUMERSECRET=<your consumer secret key>
+  CALLBACK_URL='http://dev.example.com:8000/api/autodesk/callback' node index.js
+  ```  
 
 7. Now you can run the app by executing the following in the terminal  
-`node index.js`   
+  `node index.js`   
 
 8. To test the app just open in the browser the following URL [http://dev.example.com:8000](http://dev.example.com:8000)
 
