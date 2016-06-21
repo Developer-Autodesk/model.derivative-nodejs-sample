@@ -26,7 +26,7 @@ Just go to this address, download it and install it: [https://nodejs.org/en/](ht
 3. You can download this sample multiple ways. Once you have it on your computer open terminal and just go to the folder in which the source code is, then run `npm install` - this will download additional components that the sample project needs 
 More info on how to do it: [https://docs.npmjs.com/cli/install](https://docs.npmjs.com/cli/install)
 
-4. There were some changes concerning scopes which are not yet reflected in the `view-and-data` npm pckage used by this project. So for the time being the solution is to open `/node_modules/view-and-data/view-and-data.js` and add the scope info to the `params` variable in the `getToken` function like so:  
+4. There were some changes concerning scopes which are not yet reflected in the `view-and-data` npm package used by this project. So for the time being the solution is to open `/node_modules/view-and-data/view-and-data.js` and add the scope info to the `params` variable in the `getToken` function like so:  
   ```
   var params = {
       client_secret: config.credentials.ConsumerSecret,
