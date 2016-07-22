@@ -1077,10 +1077,19 @@ function loadDocument(viewer, documentId) {
         // onLoad
         function (doc) {
             var geometryItems = [];
+            // Try 3d geometry first
             geometryItems = Autodesk.Viewing.Document.getSubItemsWithProperties(doc.getRootItem(), {
                 'type': 'geometry',
                 'role': '3d'
             }, true);
+
+            // If no 3d then try 2d
+            if (geometryItems.length < 1)
+                geometryItems = Autodesk.Viewing.Document.getSubItemsWithProperties(doc.getRootItem(), {
+                    'type': 'geometry',
+                    'role': '2d'
+                }, true);
+
             if (geometryItems.length > 0)
                 viewer.load(doc.getViewablePath(geometryItems[0]), null, null, null, doc.acmSessionId /*session for DM*/);
         },

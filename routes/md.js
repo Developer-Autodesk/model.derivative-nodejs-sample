@@ -11,28 +11,34 @@ var util = require('util');
 /////////////////////////////////////////////////////////////////
 module.exports = {
      getFormats: function (env, token, onsuccess, onerror) {
-        makeRequest(config.formats, env, token, "GET", null, function (body) {
-            onsuccess(body);
-        }, function (msg) {
-                onerror(msg);
+        makeRequest(config.formats, env, token, "GET", null,
+            function (body) {
+                onsuccess(body);
+            },
+            function (code, msg) {
+                onerror(code, msg);
             }
         );
     },
 
     getManifest: function (env, token, urn, onsuccess, onerror) {
-        makeRequest(config.manifest(urn), env, token, "GET", null, function (body) {
-            onsuccess(body);
-        }, function (msg) {
-                onerror(msg);
+        makeRequest(config.manifest(urn), env, token, "GET", null,
+            function (body) {
+                onsuccess(body);
+            },
+            function (code, msg) {
+                onerror(code, msg);
             }
         );
     },
 
     delManifest: function (env, token, urn, onsuccess, onerror) {
-        makeRequest(config.manifest(urn), env, token, "DELETE", null, function (body) {
-            onsuccess(body);
-        }, function (msg) {
-                onerror(msg);
+        makeRequest(config.manifest(urn), env, token, "DELETE", null,
+            function (body) {
+                onsuccess(body);
+            },
+            function (code, msg) {
+                onerror(code, msg);
             }
         );
     },
@@ -48,13 +54,13 @@ module.exports = {
         }, function (error, response, body) {
             if (error) {
                 console.log(error);
-                onerror(error);
+                onerror(response.statusCode, error);
                 return;
             }
 
             if (response && [200, 201].indexOf(response.statusCode) < 0) {
                 console.log(response.statusMessage);
-                onerror(response.statusMessage);
+                onerror(response.statusCode, response.statusMessage);
                 return;
             }
 
@@ -66,8 +72,8 @@ module.exports = {
     getMetadata: function (env, token, urn, onsuccess, onerror) {
         makeRequest(config.metadata(urn), env, token, "GET", null, function (body) {
             onsuccess(body);
-        }, function (msg) {
-                onerror(msg);
+        }, function (code, msg) {
+                onerror(code, msg);
             }
         );
     },
@@ -76,8 +82,9 @@ module.exports = {
         makeRequest(config.hierarchy(urn, guid), env, token, "GET", null,
             function (body) {
                 onsuccess(body);
-            }, function (msg) {
-                onerror(msg);
+            },
+            function (code, msg) {
+                onerror(code, msg);
             }
         );
     },
@@ -86,8 +93,9 @@ module.exports = {
         makeRequest(config.properties(urn, guid), env, token, "GET", null,
             function (body) {
                 onsuccess(body);
-            }, function (msg) {
-                onerror(msg);
+            },
+            function (code, msg) {
+                onerror(code, msg);
             }
         );
     },
@@ -104,13 +112,13 @@ module.exports = {
         }, function (error, response, body) {
             if (error) {
                 console.log(error);
-                onerror(error);
+                onerror(response.statusCode, error);
                 return;
             }
 
             if (response && [200, 201].indexOf(response.statusCode) < 0) {
                 console.log(response.statusMessage);
-                onerror(response.statusMessage);
+                onerror(response.statusCode, response.statusMessage);
                 return;
             }
 
@@ -149,8 +157,8 @@ module.exports = {
             // copying content
             body = JSON.parse(JSON.stringify(body));
             onsuccess(body);
-        }, function (msg) {
-            onerror(msg);
+        }, function (code, msg) {
+            onerror(code, msg);
         });
     }
 }
@@ -161,7 +169,7 @@ module.exports = {
 function makeRequest(resource, env, token, verb, body, onsuccess, onerror) {
     if (!env) {
         console.log('No environment (dev, stg, prod) defined! And token is + ' + token);
-        onerror('No environment (dev, stg, prod) defined!');
+        onerror(500, 'No environment (dev, stg, prod) defined!');
         return;
     }
 
@@ -182,13 +190,13 @@ function makeRequest(resource, env, token, verb, body, onsuccess, onerror) {
         }, function (error, response, body) {
             if (error) {
                 console.log(error);
-                onerror(error);
+                onerror(response.statusCode, error);
                 return;
             }
 
             if (response && [200, 201].indexOf(response.statusCode) < 0) {
                 console.log(response.statusMessage);
-                onerror(response.statusMessage);
+                onerror(response.statusCode, response.statusMessage);
                 return;
             }
 
@@ -205,7 +213,7 @@ function makeRequest(resource, env, token, verb, body, onsuccess, onerror) {
         }, function (error, response, body) {
             if (error) {
                 console.log(error);
-                onerror(error);
+                onerror(response.statusCode, error);
                 return;
             }
 
@@ -218,7 +226,7 @@ function makeRequest(resource, env, token, verb, body, onsuccess, onerror) {
 
             if (response && response.statusCode !== 200) {
                 console.log(response.statusMessage);
-                onerror(response.statusMessage);
+                onerror(response.statusCode, response.statusMessage);
                 return;
             }
 

@@ -146,8 +146,8 @@ router.get('/formats', function (req, res) {
     md.getFormats(req.session.env, req.session.oauthcode, function (data) {
         res.set('Content-Type', 'application/json; charset=utf-8');
         res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    }, function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
@@ -159,22 +159,26 @@ router.get('/formats', function (req, res) {
 /////////////////////////////////////////////////////////////////
 router.get('/manifests/:urn', function (req, res) {
     var urn = req.params.urn;
-    md.getManifest(req.session.env, req.session.oauthcode, urn, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.getManifest(req.session.env, req.session.oauthcode, urn,
+        function (data) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
 
 router.delete('/manifests/:urn', function (req, res) {
     var urn = req.params.urn;
-    md.delManifest(req.session.env, req.session.oauthcode, urn, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.delManifest(req.session.env, req.session.oauthcode, urn,
+        function (data) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
@@ -185,11 +189,13 @@ router.delete('/manifests/:urn', function (req, res) {
 /////////////////////////////////////////////////////////////////
 router.get('/metadatas/:urn', function (req, res) {
     var urn = req.params.urn;
-    md.getMetadata(req.session.env, req.session.oauthcode, urn, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.getMetadata(req.session.env, req.session.oauthcode, urn,
+        function (data) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
@@ -199,11 +205,13 @@ router.get('/metadatas/:urn', function (req, res) {
 // guid inside the file with the provided urn
 /////////////////////////////////////////////////////////////////
 router.get('/hierarchy', function (req, res) {
-    md.getHierarchy(req.session.env, req.session.oauthcode, req.query.urn, req.query.guid, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.getHierarchy(req.session.env, req.session.oauthcode, req.query.urn, req.query.guid,
+        function (data) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
@@ -213,11 +221,13 @@ router.get('/hierarchy', function (req, res) {
 // with the given guid and file urn
 /////////////////////////////////////////////////////////////////
 router.get('/properties', function (req, res) {
-    md.getProperties(req.session.env, req.session.oauthcode, req.query.urn, req.query.guid, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.getProperties(req.session.env, req.session.oauthcode, req.query.urn, req.query.guid,
+        function (data) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
@@ -229,13 +239,15 @@ router.get('/properties', function (req, res) {
 router.get('/download', function (req, res) {
     var fileName = req.query.fileName;
     var urn = req.query.derUrn;
-    md.getDownload(req.session.env, req.session.oauthcode, req.query.urn, req.query.derUrn, function (data, headers) {
-        var fileExt = fileName.split('.')[1];
-        res.set('content-type', 'application/' + fileExt);
-        res.set('Content-Disposition', 'attachment; filename="' + fileName +'"');
-        res.end(data);
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.getDownload(req.session.env, req.session.oauthcode, req.query.urn, req.query.derUrn,
+        function (data, headers) {
+            var fileExt = fileName.split('.')[1];
+            res.set('content-type', 'application/' + fileExt);
+            res.set('Content-Disposition', 'attachment; filename="' + fileName +'"');
+            res.end(data);
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
@@ -247,11 +259,13 @@ router.get('/download', function (req, res) {
 /////////////////////////////////////////////////////////////////
 router.post('/export', jsonParser, function (req, res) {
     //env, token, urn, format, rootFileName, fileExtType, advanced
-    md.postJobExport(req.session.env, req.session.oauthcode, req.body.urn, req.body.format, req.body.rootFileName, req.body.fileExtType, req.body.advanced, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (msg) {
-            res.status(500).end(msg);
+    md.postJobExport(req.session.env, req.session.oauthcode, req.body.urn, req.body.format, req.body.rootFileName, req.body.fileExtType, req.body.advanced,
+        function (data) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        },
+        function (code, msg) {
+            res.status(code).end(msg);
         }
     );
 });
