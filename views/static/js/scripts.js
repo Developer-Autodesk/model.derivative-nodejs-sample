@@ -12,6 +12,11 @@ $(document).ready(function () {
     //////////////////////////////////////
     // Environment variable
     var env = $.sessionStorage.get("env");
+
+    // override value
+    env = "prod";
+    console.log("Overridden #env control value to = " + env);
+    
     if (env) {
         console.log("Using value from sessionStorage = " + env);
         $('#env').val(env);
