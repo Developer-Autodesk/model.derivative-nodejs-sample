@@ -33,8 +33,8 @@ $(document).ready(function () {
         'prod': ''
     };
     var urlSuffix = urlSuffixes[env];
-    $('head').append('<script src="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js"></script>');
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/style.min.css">');
+    $('head').append('<script src="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=2.8"></script>');
+    $('head').append('<link rel="stylesheet" type="text/css" href="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/style.min.css?v=2.8">');
 
     // Get the tokens
     var token = getToken();// get3LegToken();
