@@ -6,6 +6,9 @@ var session = require('express-session');
 var app = express();
 var morgan = require('morgan');
 
+// Configure dotenv
+require('dotenv').config();
+
 // this session will be used to save the oAuth token
 app.use(cookieParser());
 

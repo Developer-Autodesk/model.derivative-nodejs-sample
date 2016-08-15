@@ -4,6 +4,7 @@
   "description": "A sample that shows how to use functionalities with derivative service.",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Autodesk Developer Network",
@@ -21,7 +22,8 @@
     "oauth": "^0.9.14",
     "request": "^2.72.0",
     "trim": "0.0.1",
-    "view-and-data": "^2.0.0"
+    "view-and-data": "^2.0.0",
+    "dotenv": "^2.0.0"
   },
   "engines": {
     "node": "6.2.0",
