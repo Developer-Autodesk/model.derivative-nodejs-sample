@@ -1,17 +1,10 @@
 {
   "name": "derivative-service-node.js-sample",
-  "version": "0.0.1",
-  "description": "A sample that shows how to use functionalities with derivative service.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Autodesk Developer Network",
-  "license": "MIT",
+  "version": "1.0.0",
+  "description": "A sample that shows how to use the Model Derivative API.",
+
   "dependencies": {
-    "async": "^1.5.2",
     "body-parser": "^1.15.1",
-    "c0nfig": "^0.2.2",
     "cookie-parser": "^1.4.3",
     "ejs": "^2.4.1",
     "express": "^4.13.4",
@@ -21,10 +14,24 @@
     "oauth": "^0.9.14",
     "request": "^2.72.0",
     "trim": "0.0.1",
-    "view-and-data": "^2.0.0"
+    "forge-data-management": "*",
+    "forge-model-derivative": "*",
+    "forge-oauth2": "*",
+    "forge-oss": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/augustogoncalves/forge-3leg.nodejs-template"
+  },
+  "scripts": {
+    "start" : "NODE_ENV=production node start.js",
+    "dev": "node start.js",
+    "nodemon": "nodemon start.js --ignore www/"
   },
   "engines": {
     "node": "6.2.0",
     "npm": "3.8.9"
-  }
+  },
+  "author": "Forge Partner Development",
+  "license": "MIT"
 }

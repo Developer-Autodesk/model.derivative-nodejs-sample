@@ -13,9 +13,10 @@
     <script src="/js/jstree.js"></script>
     <script src="/js/bootstrap.min.js"></script>
 
+    <!-- for the viewer -->
     <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/three.min.js"></script>
-
-    <!--<script src="https://developer-stg.api.autodesk.com/viewingservice/v1/viewers/viewer3D.js"></script>-->
+    <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=v2.8"></script>
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.min.css?v=v2.8"/>
 
     <link rel="stylesheet" href="/css/index.css"/>
 </head>
@@ -41,14 +42,6 @@
                     Log In
                 </a>
             </div>
-            <div class="col-sm-3" style="height:40px;">
-                <select value="prod" id="env" class="input-small form-control" style="width:150px; display: none">
-                    <option value="dev">Development</option>
-                    <option value="stg" selected>Staging</option>
-                    <option value="prod">Production</option>
-                </select>
-            </div>
-
         </div>
         <div class="row">
             <div class="col-sm-9" style="height:40px">

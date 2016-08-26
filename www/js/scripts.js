@@ -2,42 +2,11 @@ var MyVars = {
     keepTrying: true
 };
 
-$(window).unload(function() {
-    $.sessionStorage.set("env", $('#env').val());
-});
-
 $(document).ready(function () {
     //debugger;
 
-    //////////////////////////////////////
-    // Environment variable
-    var env = $.sessionStorage.get("env");
-
-    // override value
-    env = "prod";
-    console.log("Overridden #env control value to = " + env);
-    
-    if (env) {
-        console.log("Using value from sessionStorage = " + env);
-        $('#env').val(env);
-    } else {
-        env = $('#env').val();
-        console.log("Using value from #env control = " + env);
-    }
-
-    // Dynamically add the header parts referencing the correct
-    // Viewer resources from (DEV/STG/PROD) servers
-    var urlSuffixes = {
-        'dev': '-dev',
-        'stg': '-stg',
-        'prod': ''
-    };
-    var urlSuffix = urlSuffixes[env];
-    $('head').append('<script src="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=v2.8"></script>');
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/style.min.css?v=v2.8">');
-
     // Get the tokens
-    var token = getToken();// get3LegToken();
+    var token = get3LegToken();
     var auth = $("#authenticate");
 
     // Delete uploaded file
@@ -87,28 +56,16 @@ $(document).ready(function () {
     });
 
     if (token === '') {
-        $("#env").prop('disabled', false);
-        auth.click(authenticate);
+        auth.click(signIn);
     }
     else {
-        $("#env").prop('disabled', true);
-        MyVars.token3Leg = token
-        MyVars.token2Leg = get2LegToken();
+        MyVars.token3Leg = token;
+        //MyVars.token2Leg = get2LegToken();
 
         auth.html('You\'re logged in');
         auth.click(function () {
             if (confirm("You're logged in and your token is " + token + '\nWould you like to log out?')) {
-                $.ajax({
-                    url: '/api/logoff',
-                    type: 'POST',
-                    success: function (url) {
-                        window.location.reload();
-                    }
-                }).done(function (url) {
-                    window.location.reload();
-                }).fail (function (xhr, ajaxOptions, thrownError) {
-                    alert('logoff error!') ;
-                }) ;
+                logoff();
             }
         });
 
@@ -116,7 +73,7 @@ $(document).ready(function () {
         prepareFilesTree();
 
         // Download list of available file formats
-        fillFormats();
+        //fillFormats();
     }
 
     $('#progressInfo').click(function() {
@@ -148,6 +105,37 @@ function getToken() {
     return token;
 }
 
+function signIn() {
+    jQuery.ajax({
+        url: '/user/authenticate',
+        success: function (rootUrl) {
+            location.href = rootUrl;
+        }
+    });
+}
+
+function logoff() {
+    jQuery.ajax({
+        url: '/user/logoff',
+        success: function (oauthUrl) {
+            location.href = oauthUrl;
+        }
+    });
+}
+
+function get3LegToken() {
+    var token = '';
+    jQuery.ajax({
+        url: '/user/token',
+        success: function (res) {
+            token = res;
+        },
+        async: false // this request must be synchronous for the Forge Viewer
+    });
+    if (token != '') console.log('3 legged token (User Authorization): ' + token); // debug
+    return token;
+}
+
 function get2LegToken() {
     var token = makeSyncRequest('/api/2LegToken');
     console.log('2 legged token (Developer Authentication): ' + token);
@@ -173,25 +161,6 @@ function makeSyncRequest(url) {
     xmlHttp.send(null);
     return xmlHttp.responseText;
 }
-
-function authenticate() {
-    var env = $("#env").val();
-    $.ajax({
-        url: '/api/authenticate',
-        type: 'POST',
-        contentType: 'application/json',
-        dataType: 'json',
-        data: JSON.stringify({
-            'env': env
-        })
-    }).done(function (url) {
-        // iframes are not allowed
-        PopupCenter(url, "Autodesk Login", 800, 400);
-    }).fail(function (err) {
-        console.log('authenticate error\n' + err.statusText);
-    });
-}
-
 
 // http://stackoverflow.com/questions/4068373/center-a-popup-window-on-screen
 function PopupCenter(url, title, w, h) {
@@ -637,7 +606,7 @@ function prepareFilesTree() {
             'themes': {"icons": true},
             'check_callback': true, // make it modifiable
             'data': {
-                "url": '/api/treeNode',
+                "url": '/dm/treeNode',
                 "dataType": "json",
                 "data": function (node) {
                     return {
@@ -1050,10 +1019,7 @@ function cleanupViewer() {
 function initializeViewer(urn) {
     cleanupViewer();
 
-    // Get environment
-    var env = $("#env").val();
-
-    console.log("Launching Autodesk Viewer for: " + urn + " in environment: " + env);
+    console.log("Launching Autodesk Viewer for: " + urn);
     var viewerEnvironments = {
         dev: 'AutodeskDevelopment',
         stg: 'AutodeskStaging',
@@ -1061,10 +1027,10 @@ function initializeViewer(urn) {
     };
     var options = {
         'document': 'urn:' + urn,
-        'env': viewerEnvironments[env],
+        'env': viewerEnvironments['prod'],
         'getAccessToken': getToken
     };
-    //$('#viewer').css("background-image", "url(/api/getThumbnail?urn=" + urn + ")");
+
     var viewerElement = document.getElementById('forgeViewer');
     MyVars.viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerElement, {});
     Autodesk.Viewing.Initializer(
