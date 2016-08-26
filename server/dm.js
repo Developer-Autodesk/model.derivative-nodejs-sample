@@ -51,7 +51,7 @@ router.get('/dm/treeNode', function (req, res) {
                 var projects = new forgeDM.ProjectsApi();
                 projects.getProject(hubId, parentResourceId/*project_id*/)
                     .then(function (project) {
-                        var rootFolderId = project.relationships.rootFolder.data.id;
+                        var rootFolderId = project.data.relationships.rootFolder.data.id;
                         var folders = new forgeDM.FoldersApi();
                         folders.getFolderContents(parentResourceId, rootFolderId)
                             .then(function (folderContents) {
@@ -78,6 +78,9 @@ router.get('/dm/treeNode', function (req, res) {
                 items.getItemVersions(projectId, parentResourceId/*item_id*/)
                     .then(function (versions) {
                         res.end(makeTree(versions.data, false));
+                    })
+                    .catch(function (error) {
+                        console.log(error);
                     });
         }
     }
