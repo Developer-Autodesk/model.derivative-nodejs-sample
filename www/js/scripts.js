@@ -12,7 +12,7 @@ $(document).ready(function () {
     // Delete uploaded file
     $("#deleteFile").click(function(evt) {
         $.ajax({
-            url: '/api/myfiles/' + encodeURIComponent(MyVars.fileName),
+            url: '/dm/myfiles/' + encodeURIComponent(MyVars.fileName),
             type: 'DELETE'
         }).done(function (data) {
             console.log(data);
@@ -31,7 +31,7 @@ $(document).ready(function () {
         var fileName = this.value;
         data.append (0, this.files[0]) ;
         $.ajax ({
-            url: '/api/myfiles',
+            url: '/dm/myfiles',
             type: 'POST',
             headers: { 'x-file-name': fileName },
             data: data,
@@ -73,7 +73,7 @@ $(document).ready(function () {
         prepareFilesTree();
 
         // Download list of available file formats
-        //fillFormats();
+        fillFormats();
     }
 
     $('#progressInfo').click(function() {
@@ -185,7 +185,7 @@ function downloadDerivative(urn, derUrn, fileName) {
     console.log("downloadDerivative for urn=" + urn + " and derUrn=" + derUrn);
     // fileName = file name you want to use for download
     var url = window.location.protocol + "//" + window.location.host +
-        "/api/download?urn=" + urn +
+        "/dm/download?urn=" + urn +
         "&derUrn=" + derUrn +
         "&fileName=" + encodeURIComponent(fileName);
 
@@ -196,7 +196,7 @@ function getThumbnail(urn) {
     console.log("downloadDerivative for urn=" + urn);
     // fileName = file name you want to use for download
     var url = window.location.protocol + "//" + window.location.host +
-        "/api/thumbnail?urn=" + urn;
+        "/dm/thumbnail?urn=" + urn;
 
     window.open(url,'_blank');
 }
@@ -267,7 +267,7 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
     };
 
     $.ajax({
-        url: '/api/export',
+        url: '/md/export',
         type: 'POST',
         contentType: 'application/json',
         dataType: 'json',
@@ -299,17 +299,17 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
 function getMetadata(urn, onsuccess) {
     console.log("getMetadata for urn=" + urn);
     $.ajax({
-        url: '/api/metadatas/' + urn,
+        url: '/md/metadatas/' + urn,
         type: 'GET'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
+
         // Get first model guid
         // If it does not exists then something is wrong
         // let's check the manifest
         // If get manifest sees a failed attempt then it will
         // delete the manifest
-        var md0 = json.data.metadata[0];
+        var md0 = data.data.metadata[0];
         if (!md0) {
             getManifest(urn, function () {});
         } else {
@@ -326,15 +326,14 @@ function getMetadata(urn, onsuccess) {
 function getHierarchy(urn, guid, onsuccess) {
     console.log("getHierarchy for urn=" + urn + " and guid=" + guid);
     $.ajax({
-        url: '/api/hierarchy',
+        url: '/md/hierarchy',
         type: 'GET',
         data: {urn: urn, guid: guid}
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
 
         // If it's 'accepted' then it's not ready yet
-        if (json.result === 'accepted') {
+        if (data.result === 'accepted') {
             // Let's try again
             if (MyVars.keepTrying) {
                 window.setTimeout(function() {
@@ -350,7 +349,7 @@ function getHierarchy(urn, guid, onsuccess) {
 
         // We got what we want
         if (onsuccess !== undefined) {
-            onsuccess(json);
+            onsuccess(data);
         }
     }).fail(function(err) {
         console.log('GET /api/hierarchy call failed\n' + err.statusText);
@@ -360,14 +359,14 @@ function getHierarchy(urn, guid, onsuccess) {
 function getProperties(urn, guid, onsuccess) {
     console.log("getProperties for urn=" + urn + " and guid=" + guid);
     $.ajax({
-        url: '/api/properties',
+        url: '/md/properties',
         type: 'GET',
         data: {urn: urn, guid: guid}
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
+
         if (onsuccess !== undefined) {
-            onsuccess(json);
+            onsuccess(data);
         }
     }).fail(function(err) {
         console.log('GET /api/properties call failed\n' + err.statusText);
@@ -377,14 +376,14 @@ function getProperties(urn, guid, onsuccess) {
 function getManifest(urn, onsuccess) {
     console.log("getManifest for urn=" + urn);
     $.ajax({
-        url: '/api/manifests/' + urn,
+        url: '/md/manifests/' + urn,
         type: 'GET'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
-        if (json.status !== 'failed') {
-            if (json.progress !== 'complete') {
-                showProgress("Translation progress: " + json.progress, json.status);
+
+        if (data.status !== 'failed') {
+            if (data.progress !== 'complete') {
+                showProgress("Translation progress: " + data.progress, data.status);
 
                 if (MyVars.keepTrying) {
                     // Keep calling until it's done
@@ -396,12 +395,12 @@ function getManifest(urn, onsuccess) {
                     MyVars.keepTrying = true;
                 }
             } else {
-                showProgress("Translation completed", json.status);
-                onsuccess(json);
+                showProgress("Translation completed", data.status);
+                onsuccess(data);
             }
         // if it's a failed translation best thing is to delete it
         } else {
-            showProgress("Translation failed", json.status);
+            showProgress("Translation failed", data.status);
             // Should we do automatic manifest deletion in case of a failed one?
             //delManifest(urn, function () {});
         }
@@ -414,7 +413,7 @@ function getManifest(urn, onsuccess) {
 function delManifest(urn, onsuccess) {
     console.log("delManifest for urn=" + urn);
     $.ajax({
-        url: '/api/manifests/' + urn,
+        url: '/md/manifests/' + urn,
         type: 'DELETE'
     }).done(function (data) {
         console.log(data);
@@ -434,7 +433,7 @@ function delManifest(urn, onsuccess) {
 function getDerivatives(urn, fileName, fileExtType, onsuccess) {
     console.log("getDerivatives for urn=" + urn);
     var ret = $.ajax({
-        url: '/api/job',
+        url: '/md/job',
         type: 'POST',
         contentType: 'application/json',
         dataType: 'json',
@@ -456,7 +455,7 @@ function getDerivatives(urn, fileName, fileExtType, onsuccess) {
             }
         }
     }).fail(function(err) {
-        console.log('POST /api/job call failed\n' + err.statusText);
+        console.log('POST /md/job call failed\n' + err.statusText);
     });
 }
 
@@ -468,17 +467,16 @@ function getDerivatives(urn, fileName, fileExtType, onsuccess) {
 function getFormats(onsuccess) {
     console.log("getFormats");
     $.ajax({
-        url: '/api/formats',
+        url: '/md/formats',
         type: 'GET'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
 
         if (onsuccess !== undefined) {
-            onsuccess(json);
+            onsuccess(data);
         }
     }).fail(function(err) {
-        console.log('GET /api/formats call failed\n' + err.statusText);
+        console.log('GET /md/formats call failed\n' + err.statusText);
     });
 }
 
@@ -729,7 +727,7 @@ function prepareFilesTree() {
 function getMyFiles () {
     console.log("getMyFiles calling /api/myfiles");
     var ret = $.ajax({
-        url: '/api/myfiles',
+        url: '/dm/myfiles',
         type: 'GET'
     }).done(function (data) {
         console.log(data);
