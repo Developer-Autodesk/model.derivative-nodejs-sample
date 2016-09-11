@@ -817,27 +817,25 @@ function showHierarchy(urn, guid, objectIds, rootFileName, fileExtType) {
     // Get svf export in order to get hierarchy and properties
     // for the model
     var format = 'svf';
-    askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType, function () {
-        getManifest(urn, function(manifest) {
-            getMetadata(urn, function (guid) {
-                showProgress("Retrieving hierarchy...", "inprogress");
+    askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType, function (manifest) {
+        getMetadata(urn, function (guid) {
+            showProgress("Retrieving hierarchy...", "inprogress");
 
-                getHierarchy(urn, guid, function (data) {
-                    showProgress("Retrieved hierarchy", "success");
+            getHierarchy(urn, guid, function (data) {
+                showProgress("Retrieved hierarchy", "success");
 
-                    prepareHierarchyTree(urn, guid, data.data);
+                prepareHierarchyTree(urn, guid, data.data);
 
-                    for (var derId in manifest.derivatives) {
-                        var der = manifest.derivatives[derId];
-                        // We just have to make sure there is an svf
-                        // translation, but the viewer will find it
-                        // from the urn
-                        if (der.outputType === 'svf') {
+                for (var derId in manifest.derivatives) {
+                    var der = manifest.derivatives[derId];
+                    // We just have to make sure there is an svf
+                    // translation, but the viewer will find it
+                    // from the urn
+                    if (der.outputType === 'svf') {
 
-                            initializeViewer(urn);
-                        }
+                        initializeViewer(urn);
                     }
-                });
+                }
             });
         });
     });
@@ -1026,7 +1024,7 @@ function initializeViewer(urn) {
     var options = {
         'document': 'urn:' + urn,
         'env': viewerEnvironments['prod'],
-        'getAccessToken': getToken
+        'getAccessToken': get3LegToken
     };
 
     var viewerElement = document.getElementById('forgeViewer');
