@@ -10,131 +10,9 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var jsonParser = bodyParser.json();
 
+var config = require('./config');
+
 var forgeDM = require('forge-data-management');
-
-/////////////////////////////////////////////////////////////////
-// Gets the information about the files we previously uploaded
-// to our own bucket on OSS
-/////////////////////////////////////////////////////////////////
-router.get('/myfiles', function (req, res) {
-    var bucketName = getBucketName(req);
-    bucketName = encodeURIComponent(bucketName);
-    // This should always use 2legged token
-    dm.getObjectsInBucket(req.session.env, req.session.oauthcode2, bucketName, function(data) {
-        var datas = [];
-        var asyncTasks = [];
-        for (var key in data.items) {
-            var obj = data.items[key];
-            (function (objectKey) {
-                asyncTasks.push(function (callback) {
-                    objectKey = encodeURIComponent(objectKey);
-                    // This should always use 2legged token
-                    dm.getObjectDetails(req.session.env, req.session.oauthcode2, bucketName, objectKey, function(data) {
-                        datas.push(data);
-                        callback();
-                    });
-                });
-            })(obj.objectKey);
-        }
-
-        // Get back all the results
-        async.parallel(asyncTasks, function(err) {
-            // All tasks are done now
-            res.json(datas);
-        });
-    });
-});
-
-/////////////////////////////////////////////////////////////////
-// Upload a file to our own bucket on OSS
-//
-/////////////////////////////////////////////////////////////////
-router.post('/myfiles', jsonParser, function (req, res) {
-    var fileName ='' ;
-    var form = new formidable.IncomingForm () ;
-
-    // Make sure the folder for the data exists
-    var bucketName = getBucketName(req);
-
-    // Only this folder works on heroku
-    form.uploadDir = '/tmp';
-
-    form
-        .on ('field', function (field, value) {
-            console.log (field, value) ;
-        })
-        .on ('file', function (field, file) {
-            console.log (field, file) ;
-            fs.rename (file.path, form.uploadDir + '/' + file.name) ;
-            fileName = file.name ;
-        })
-        .on ('end', function () {
-            console.log ('-> upload done') ;
-            if ( fileName == '' ) {
-                res.status(500).end('No file submitted!');
-            }
-            // Now upload it to OSS
-            var bucketCreationData = {
-                bucketKey: bucketName,
-                servicesAllowed: {},
-                policyKey: 'transient'
-            };
-
-            // Getting a new key
-            lmv.initialize().then(
-                // initialize success
-                function() {
-                    // Getting the bucket
-                    lmv.getBucket(bucketName, true, bucketCreationData).then(
-                        // getBucket success
-                        function() {
-                            // Uploading the file
-                            var tmpFileName = path.join(form.uploadDir, fileName);
-                            lmv.upload(
-                                tmpFileName,
-                                bucketName,
-                                fileName).then(
-                                // upload success
-                                function(uploadInfo){
-                                    // Send back the data
-                                    res.json(uploadInfo);
-                                },
-                                // upload error
-                                function(err) {
-                                    res.status(500).end('Could not upload file into bucket!');
-                                }
-                            );
-                        },
-                        // getBucket error
-                        function(err) {
-                            res.status(500).end('Could not create bucket for file!');
-                        }
-                    );
-                },
-                // initialize error
-                function (err) {
-                    res.status(500).end('Could not get access token!');
-                }
-            );
-        });
-
-    form.parse(req);
-});
-
-/////////////////////////////////////////////////////////////////
-// Upload a file to our own bucket on OSS
-//
-/////////////////////////////////////////////////////////////////
-router.delete('/myfiles/:fileName', function (req, res) {
-    var bucketName = getBucketName(req);
-    var fileName = req.params.fileName;
-
-    bucketName = encodeURIComponent(bucketName);
-    fileName = encodeURIComponent(fileName);
-    dm.deleteObject(req.session.env, req.session.oauthcode, bucketName, fileName, function(data) {
-        res.json({ result: "success"});
-    });
-});
 
 /////////////////////////////////////////////////////////////////
 // Provide information to the tree control on the client
@@ -230,6 +108,7 @@ function makeTree(listOf, canHaveChildren, data) {
 
         var treeItem = {
             href: item.links.self.href,
+            wipid: item.id,
             storage: (item.relationships != null && item.relationships.storage != null ? item.relationships.storage.data.id : null),
             data: (item.relationships != null && item.relationships.derivatives != null ? item.relationships.derivatives.data.id : null),
             text: (item.attributes.displayName == null ? item.attributes.name : item.attributes.displayName),

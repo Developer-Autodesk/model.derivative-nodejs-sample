@@ -92,7 +92,7 @@ function base64encode(str) {
     }
 
     // Remove ending '=' signs
-    var ret2 = ret.replace(/=/g, '');
+    var ret2 = ret.replace(/=/g, '').replace(/[/]/g, '_');
 
     console.log('base64encode result = ' + ret2);
 
@@ -185,7 +185,7 @@ function downloadDerivative(urn, derUrn, fileName) {
     console.log("downloadDerivative for urn=" + urn + " and derUrn=" + derUrn);
     // fileName = file name you want to use for download
     var url = window.location.protocol + "//" + window.location.host +
-        "/dm/download?urn=" + urn +
+        "/md/download?urn=" + urn +
         "&derUrn=" + derUrn +
         "&fileName=" + encodeURIComponent(fileName);
 
@@ -683,7 +683,12 @@ function prepareFilesTree() {
             MyVars.rootFileName = data.node.original.rootFileName;
             MyVars.fileName = data.node.original.fileName;
             MyVars.fileExtType = data.node.original.fileExtType;
-            MyVars.selectedUrn = base64encode(data.node.original.storage);
+
+            if ($('#wipVsStorage').hasClass('active')) {
+                MyVars.selectedUrn = base64encode(data.node.original.wipid);
+            } else {
+                MyVars.selectedUrn = base64encode(data.node.original.storage);
+            }
 
             // Fill hierarchy tree
             // format, urn, guid, objectIds, rootFileName, fileExtType
@@ -696,6 +701,7 @@ function prepareFilesTree() {
             );
             console.log(
                 "data.node.original.storage = " + data.node.original.storage,
+                "data.node.original.wipid = " + data.node.original.wipid,
                 ", data.node.original.fileName = " + data.node.original.fileName,
                 ", data.node.original.fileExtType = " + data.node.original.fileExtType
             );

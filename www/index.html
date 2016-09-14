@@ -34,8 +34,8 @@
         <h4>Select an item version to show a file using <a href="https://developer.autodesk.com/api/viewerapi/">
                 Autodesk Viewer</a>
         </h4>
-        <div class="row forgeLogIn" style="  width:100%">
-            <div class="col-sm-3">
+        <div class="row">
+            <div class="col-sm-3" style="height:40px">
 
                 <a href="#" id="authenticate" class="btn btn-warning btn-block">
                     <span class="glyphicon glyphicon-user"></span>
@@ -44,10 +44,17 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-sm-9" style="height:40px">
+            <div class="col-sm-3" style="height:40px">
                 <div id="progressInfo" class="btn btn-info" style="font-size: 10pt ">
                     <span id="progressInfoText">Progress info</span>
                     <span id="progressInfoIcon"></span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-3" style="height:40px">
+                <div id="wipVsStorage" class="btn btn-primary" data-toggle="button" aria-pressed="false" autocomplete="off" style="font-size: 10pt ">
+                    <span id="wipVsStorageText">Use WIP (instead of Storage)</span>
                 </div>
             </div>
         </div>

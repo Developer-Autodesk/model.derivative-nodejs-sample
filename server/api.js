@@ -26,7 +26,7 @@ router.get('/myfiles', function (req, res) {
     var bucketName = getBucketName(req);
     bucketName = encodeURIComponent(bucketName);
     // This should always use 2legged token
-    dm.getObjectsInBucket(req.session.env, req.session.oauthcode2, bucketName, function(data) {
+    dm.getObjectsInBucket(req.session.env, req.session.oauthcode2, bucketName, function (data) {
         var datas = [];
         var asyncTasks = [];
         for (var key in data.items) {
@@ -35,7 +35,7 @@ router.get('/myfiles', function (req, res) {
                 asyncTasks.push(function (callback) {
                     objectKey = encodeURIComponent(objectKey);
                     // This should always use 2legged token
-                    dm.getObjectDetails(req.session.env, req.session.oauthcode2, bucketName, objectKey, function(data) {
+                    dm.getObjectDetails(req.session.env, req.session.oauthcode2, bucketName, objectKey, function (data) {
                         datas.push(data);
                         callback();
                     });
@@ -44,7 +44,7 @@ router.get('/myfiles', function (req, res) {
         }
 
         // Get back all the results
-        async.parallel(asyncTasks, function(err) {
+        async.parallel(asyncTasks, function (err) {
             // All tasks are done now
             res.json(datas);
         });
@@ -56,8 +56,8 @@ router.get('/myfiles', function (req, res) {
 //
 /////////////////////////////////////////////////////////////////
 router.post('/myfiles', jsonParser, function (req, res) {
-    var fileName ='' ;
-    var form = new formidable.IncomingForm () ;
+    var fileName = '';
+    var form = new formidable.IncomingForm();
 
     // Make sure the folder for the data exists
     var bucketName = getBucketName(req);
@@ -66,17 +66,17 @@ router.post('/myfiles', jsonParser, function (req, res) {
     form.uploadDir = '/tmp';
 
     form
-        .on ('field', function (field, value) {
-            console.log (field, value) ;
+        .on('field', function (field, value) {
+            console.log(field, value);
         })
-        .on ('file', function (field, file) {
-            console.log (field, file) ;
-            fs.rename (file.path, form.uploadDir + '/' + file.name) ;
-            fileName = file.name ;
+        .on('file', function (field, file) {
+            console.log(field, file);
+            fs.rename(file.path, form.uploadDir + '/' + file.name);
+            fileName = file.name;
         })
-        .on ('end', function () {
-            console.log ('-> upload done') ;
-            if ( fileName == '' ) {
+        .on('end', function () {
+            console.log('-> upload done');
+            if (fileName == '') {
                 res.status(500).end('No file submitted!');
             }
             // Now upload it to OSS
@@ -89,11 +89,11 @@ router.post('/myfiles', jsonParser, function (req, res) {
             // Getting a new key
             lmv.initialize().then(
                 // initialize success
-                function() {
+                function () {
                     // Getting the bucket
                     lmv.getBucket(bucketName, true, bucketCreationData).then(
                         // getBucket success
-                        function() {
+                        function () {
                             // Uploading the file
                             var tmpFileName = path.join(form.uploadDir, fileName);
                             lmv.upload(
@@ -101,18 +101,18 @@ router.post('/myfiles', jsonParser, function (req, res) {
                                 bucketName,
                                 fileName).then(
                                 // upload success
-                                function(uploadInfo){
+                                function (uploadInfo) {
                                     // Send back the data
                                     res.json(uploadInfo);
                                 },
                                 // upload error
-                                function(err) {
+                                function (err) {
                                     res.status(500).end('Could not upload file into bucket!');
                                 }
                             );
                         },
                         // getBucket error
-                        function(err) {
+                        function (err) {
                             res.status(500).end('Could not create bucket for file!');
                         }
                     );
@@ -133,8 +133,8 @@ router.delete('/myfiles/:fileName', function (req, res) {
 
     bucketName = encodeURIComponent(bucketName);
     fileName = encodeURIComponent(fileName);
-    dm.deleteObject(req.session.env, req.session.oauthcode, bucketName, fileName, function(data) {
-        res.json({ result: "success"});
+    dm.deleteObject(req.session.env, req.session.oauthcode, bucketName, fileName, function (data) {
+        res.json({result: "success"});
     });
 });
 
@@ -144,9 +144,9 @@ router.delete('/myfiles/:fileName', function (req, res) {
 /////////////////////////////////////////////////////////////////
 router.get('/formats', function (req, res) {
     md.getFormats(req.session.env, req.session.oauthcode, function (data) {
-        res.set('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify(data));
-    }, function (code, msg) {
+            res.set('Content-Type', 'application/json; charset=utf-8');
+            res.end(JSON.stringify(data));
+        }, function (code, msg) {
             res.status(code).end(msg);
         }
     );
@@ -243,7 +243,7 @@ router.get('/download', function (req, res) {
         function (data, headers) {
             var fileExt = fileName.split('.')[1];
             res.set('content-type', 'application/' + fileExt);
-            res.set('Content-Disposition', 'attachment; filename="' + fileName +'"');
+            res.set('Content-Disposition', 'attachment; filename="' + fileName + '"');
             res.end(data);
         },
         function (code, msg) {
@@ -326,7 +326,7 @@ router.post('/authenticate', jsonParser, function (req, res) {
                     req.session.oauthcode = access_token;
                     req.session.oauthcode3 = access_token;
                     req.session.cookie.maxAge = parseInt(results.expires_in) * 6000;
-                    dm.getUsersMe(req.session.env, req.session.oauthcode, function(data) {
+                    dm.getUsersMe(req.session.env, req.session.oauthcode, function (data) {
                         // We need this because each users file upload info
                         // will be stored in their "env + userId" named folder
                         req.session.userId = data.userId;

@@ -19,23 +19,23 @@
 'use strict'; // http://www.w3schools.com/js/js_strict.asp
 
 function Token(session) {
-  this._session = session;
+    this._session = session;
 }
 
 Token.prototype.getTokenInternal = function () {
-  return this._session.tokeninternal;
+    return this._session.tokeninternal;
 };
 
 Token.prototype.setTokenInternal = function (token) {
-  this._session.tokeninternal = token;
+    this._session.tokeninternal = token;
 };
 
 Token.prototype.getTokenPublic = function () {
-  return this._session.tokenpublic;
+    return this._session.tokenpublic;
 };
 
 Token.prototype.setTokenPublic = function (token) {
-  this._session.tokenpublic = token;
+    this._session.tokenpublic = token;
 };
 
 module.exports = Token;

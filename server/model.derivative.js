@@ -32,7 +32,7 @@ router.get('/formats', function (req, res) {
     var derivatives = getForgeMD(req);
 
     derivatives.getFormats()
-        .then(function(formats){
+        .then(function (formats) {
             res.json(formats);
         })
         .catch(function (error) {
@@ -58,15 +58,15 @@ router.get('/manifests/:urn', function (req, res) {
 });
 
 router.delete('/manifests/:urn', function (req, res) {
-    md.delManifest(req.session.env, req.session.oauthcode, req.params.urn,
-        function (data) {
-            res.set('Content-Type', 'application/json; charset=utf-8');
-            res.end(JSON.stringify(data));
-        },
-        function (code, msg) {
-            res.status(code).end(msg);
-        }
-    );
+    var derivatives = getForgeMD(req);
+
+    derivatives.delManifest(req.params.urn)
+        .then(function (data) {
+            res.json(data);
+        })
+        .catch(function (error) {
+            res.status(500).end(msg);
+        });
 });
 
 /////////////////////////////////////////////////////////////////
@@ -121,20 +121,32 @@ router.get('/properties', function (req, res) {
 // Download the given derivative file, e.g. a STEP or other
 // file format which are associated with the model file
 /////////////////////////////////////////////////////////////////
-router.get('/download', function (req, res) {
-    var fileName = req.query.fileName;
-    var urn = req.query.derUrn;
-    md.getDownload(req.session.env, req.session.oauthcode, req.query.urn, req.query.derUrn,
-        function (data, headers) {
-            var fileExt = fileName.split('.')[1];
+router.get('/download-old', function (req, res) {
+    var derivatives = getForgeMD(req);
+
+    derivatives.getDerivativeManifest(req.query.urn, req.query.derUrn)
+        .then(function (data) {
+            var fileExt = req.query.fileName.split('.')[1];
             res.set('content-type', 'application/' + fileExt);
-            res.set('Content-Disposition', 'attachment; filename="' + fileName +'"');
+            res.set('Content-Disposition', 'attachment; filename="' + req.query.fileName + '"');
             res.end(data);
-        },
-        function (code, msg) {
-            res.status(code).end(msg);
-        }
-    );
+        })
+        .catch(function (error) {
+            res.status(500).end(msg);
+        });
+});
+
+router.get('/download', function (req, res) {
+    var derivatives = getForgeMD(req);
+
+    derivatives.getManifest(req.params.urn)
+        .then(function (data) {
+            console.log(data); // debug
+            res.json(data);
+        })
+        .catch(function (error) {
+            res.status(500).end(msg);
+        });
 });
 
 /////////////////////////////////////////////////////////////////
@@ -159,7 +171,7 @@ router.post('/export', jsonParser, function (req, res) {
         "urn": urn,
         "rootFilename": req.body.rootFileName,
         "compressedUrn": true
-    } : { "urn": req.body.urn });
+    } : {"urn": req.body.urn});
     var output = {
         "destination": {
             "region": "us"
@@ -169,7 +181,7 @@ router.post('/export', jsonParser, function (req, res) {
 
     var derivatives = getForgeMD(req);
 
-    derivatives.translate({"input": input, "output": output })
+    derivatives.translate({"input": input, "output": output})
         .then(function (data) {
             res.json(data);
         })

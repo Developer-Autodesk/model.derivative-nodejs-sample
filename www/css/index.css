@@ -28,15 +28,15 @@
 }
 #forgeFileOptions {
     height: 55px;   top: 245px;
-    border-top-width: 1px; border-top-color: black; border-top-style: solid;
+    border-top-width: 1px; border-top-color: silver; border-top-style: solid;
 }
 #forgeProperties {
     height: 195px;  bottom: 0;
-    border-top-width: 1px; border-top-color: black; border-top-style: solid;
+    border-top-width: 1px; border-top-color: silver; border-top-style: solid;
 }
 #forgeUpload {
     height: 55px;   bottom: 0px;
-    border-top-width: 1px; border-top-color: black; border-top-style: solid;
+    border-top-width: 1px; border-top-color: silver; border-top-style: solid;
     overflow: hidden;
 }
 #forgeFiles {
@@ -70,4 +70,8 @@
         -webkit-transform: rotate(359deg);
         transform: rotate(359deg);
     }
+}
+
+.btn-primary.active {
+    background-color: limegreen;
 }
