@@ -12,7 +12,7 @@ $(document).ready(function () {
     // Delete uploaded file
     $("#deleteFile").click(function(evt) {
         $.ajax({
-            url: '/dm/myfiles/' + encodeURIComponent(MyVars.fileName),
+            url: '/dm/files/' + encodeURIComponent(MyVars.fileName),
             type: 'DELETE'
         }).done(function (data) {
             console.log(data);
@@ -31,7 +31,7 @@ $(document).ready(function () {
         var fileName = this.value;
         data.append (0, this.files[0]) ;
         $.ajax ({
-            url: '/dm/myfiles',
+            url: '/dm/files',
             type: 'POST',
             headers: { 'x-file-name': fileName },
             data: data,
@@ -92,7 +92,12 @@ function base64encode(str) {
     }
 
     // Remove ending '=' signs
-    var ret2 = ret.replace(/=/g, '').replace(/[/]/g, '_');
+    // Use _ instead of /
+    // Use - insteaqd of +
+    // Have a look at this page for info on "Unpadded 'base64url' for "named information" URI's (RFC 6920)"
+    // which is the format being used by the Model Derivative API
+    // https://en.wikipedia.org/wiki/Base64#Variants_summary_table
+    var ret2 = ret.replace(/=/g, '').replace(/[/]/g, '_').replace(/[+]/g, '-');
 
     console.log('base64encode result = ' + ret2);
 
@@ -428,37 +433,6 @@ function delManifest(urn, onsuccess) {
     });
 }
 
-// Ask for an svf translation in order to get all the hierarchical information
-// and properties
-function getDerivatives(urn, fileName, fileExtType, onsuccess) {
-    console.log("getDerivatives for urn=" + urn);
-    var ret = $.ajax({
-        url: '/md/job',
-        type: 'POST',
-        contentType: 'application/json',
-        dataType: 'json',
-        // If fileExtType is provided then pass it on
-        // Derivative services will need to know if it's a
-        // composite/compressed file and that can be told from the
-        // fileExtType value
-        data: (fileExtType ? JSON.stringify({
-            urn: urn,
-            fileName: fileName,
-            fileExtType: fileExtType
-        }) : JSON.stringify({urn: urn}))
-    }).done(function (data) {
-        console.log(data);
-        if (data.result === 'success' // newly submitted data
-            || data.result === 'created') { // already submitted data
-            if (onsuccess !== undefined) {
-                onsuccess();
-            }
-        }
-    }).fail(function(err) {
-        console.log('POST /md/job call failed\n' + err.statusText);
-    });
-}
-
 /////////////////////////////////////////////////////////////////
 // Formats / #forgeFormats
 // Shows the export file formats available for the selected model
@@ -634,9 +608,6 @@ function prepareFilesTree() {
             },
             'versions': {
                 'icon': 'glyphicon glyphicon-time'
-            },
-            'files': {
-                'icon': 'glyphicon glyphicon-time'
             }
         },
         "plugins": ["types", "state"] // let's not use sort: , "sort"]
@@ -648,14 +619,9 @@ function prepareFilesTree() {
         $("#forgeFormats").attr('disabled', 'disabled');
         $("#downloadExport").attr('disabled', 'disabled');
 
-        if (data.node.type === 'files') {
-            $("#deleteFile").removeAttr('disabled');
-        } else {
-            $("#deleteFile").attr('disabled', 'disabled');
-        }
-
-        if (data.node.type === 'versions' || data.node.type === 'files') {
+        if (data.node.type === 'versions') {
             $("#deleteManifest").removeAttr('disabled');
+            $("#deleteFile").removeAttr('disabled');
 
             MyVars.keepTrying = true;
             MyVars.selectedNode = data.node;
@@ -710,6 +676,7 @@ function prepareFilesTree() {
             //initializeViewer(data.node.data);
         } else {
             $("#deleteManifest").attr('disabled', 'disabled');
+            $("#deleteFile").attr('disabled', 'disabled');
 
             // Switch back to 3 legged
             useToken(MyVars.token3Leg);
@@ -724,88 +691,7 @@ function prepareFilesTree() {
             $('#forgeProperties').empty().jstree('destroy');
             $('#forgeViewer').html('');
         }
-    }).bind('loaded.jstree', function(e, data) {
-        // Also read the files we have on the server
-        getMyFiles();
     });
-}
-
-function getMyFiles () {
-    console.log("getMyFiles calling /api/myfiles");
-    var ret = $.ajax({
-        url: '/dm/myfiles',
-        type: 'GET'
-    }).done(function (data) {
-        console.log(data);
-        for (itemId in data) {
-            var item = data[itemId];
-            addToFilesTree(item.objectId, item.objectKey);
-        }
-
-    }).fail(function() {
-        console.log('GET /api/myfiles call failed');
-    });
-}
-
-function addToFilesTree(objectId, fileName) {
-    // we need to set
-    // fileType = obj, ipt, etc
-    // fileExtType = versions:autodesk.a360:CompositeDesign or not
-    // fileName = e.g. myfile.ipt
-    // storage = the objectId of the file
-    var nameParts = fileName.split('.');
-    var oldExtension = nameParts[nameParts.length - 1];
-    var extension = oldExtension;
-
-    // If it's a zip then we assume that the root file name
-    // comes before the zip extension,
-    // e.g. "scissors.iam.zip" >> "scissors.iam" is the root
-
-    var myFileNodeId = $('#forgeFiles').jstree('get_node', "forgeFiles_myFiles");
-    if (!myFileNodeId) {
-        myFileNodeId = $('#forgeFiles').jstree('create_node', "#",
-            {
-                id: "forgeFiles_myFiles",
-                text: "My Files",
-                type: "hubs",
-            }, "last"
-        );
-    }
-
-    var myFileNode = $('#forgeFiles').jstree().get_node(myFileNodeId);
-    for (var childId in myFileNode.children) {
-        var childNodeId = myFileNode.children[childId];
-        var childNode = $('#forgeFiles').jstree().get_node(childNodeId);
-
-        // If this file is already listed then we've overwritten it on
-        // the server and so no need to add it to the tree
-        if (childNode.text === fileName) {
-            return;
-        }
-    }
-
-    var rootFileName = fileName;
-    if (extension === 'zip') {
-        rootFileName = fileName.slice(0, -4);
-        // If it's a zip and it has another extension
-        // then cut back to that
-        if (nameParts.length > 2) {
-            extension = nameParts[nameParts.length - 2];
-        }
-    }
-
-    var newNode = $('#forgeFiles').jstree('create_node', "forgeFiles_myFiles",
-        {
-            text: fileName,
-            type: "files",
-            fileType: extension,
-            fileExtType: (oldExtension === 'zip' ?
-                'versions:autodesk.a360:CompositeDesign' : 'versions:autodesk.a360:File'),
-            fileName: fileName,
-            rootFileName: rootFileName,
-            storage: objectId
-        }, "last"
-    );
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1022,14 +908,10 @@ function initializeViewer(urn) {
     cleanupViewer();
 
     console.log("Launching Autodesk Viewer for: " + urn);
-    var viewerEnvironments = {
-        dev: 'AutodeskDevelopment',
-        stg: 'AutodeskStaging',
-        prod: 'AutodeskProduction'
-    };
+
     var options = {
         'document': 'urn:' + urn,
-        'env': viewerEnvironments['prod'],
+        'env': 'AutodeskProduction',
         'getAccessToken': get3LegToken
     };
 
@@ -1069,6 +951,11 @@ function loadDocument(viewer, documentId) {
         // onError
         function (errorMsg) {
             showThumbnail(documentId.substr(4, documentId.length - 1));
+        },
+        {
+            'oauth2AccessToken': get3LegToken(),
+            'x-ads-acm-namespace': 'WIPDM',
+            'x-ads-acm-check-groups': 'true',
         }
     )
 }

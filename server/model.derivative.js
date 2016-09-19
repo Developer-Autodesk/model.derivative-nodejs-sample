@@ -16,10 +16,15 @@ var forgeMD = require('forge-model-derivative');
 // Get the list of export file formats supported by the
 // Model Derivative API
 /////////////////////////////////////////////////////////////////
-function getForgeMD(req) {
+function getForgeMD(req, res) {
     var tokenSession = new token(req.session);
     forgeMD.ApiClient.instance.authentications ['oauth2_access_code'].accessToken =
         tokenSession.getTokenInternal();
+
+    if (!tokenSession.isAuthorized()) {
+        res.status(401).json({error: 'Please login first'});
+        return null;
+    }
 
     return new forgeMD.DerivativesApi();
 }
@@ -46,7 +51,7 @@ router.get('/formats', function (req, res) {
 // available for this file
 /////////////////////////////////////////////////////////////////
 router.get('/manifests/:urn', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.getManifest(req.params.urn)
         .then(function (data) {
@@ -58,7 +63,7 @@ router.get('/manifests/:urn', function (req, res) {
 });
 
 router.delete('/manifests/:urn', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.delManifest(req.params.urn)
         .then(function (data) {
@@ -74,7 +79,7 @@ router.delete('/manifests/:urn', function (req, res) {
 // the guid of the avilable models in the file
 /////////////////////////////////////////////////////////////////
 router.get('/metadatas/:urn', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.getMetadata(req.params.urn)
         .then(function (data) {
@@ -90,7 +95,7 @@ router.get('/metadatas/:urn', function (req, res) {
 // guid inside the file with the provided urn
 /////////////////////////////////////////////////////////////////
 router.get('/hierarchy', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.getModelviewMetadata(req.query.urn, req.query.guid)
         .then(function (data) {
@@ -106,7 +111,7 @@ router.get('/hierarchy', function (req, res) {
 // with the given guid and file urn
 /////////////////////////////////////////////////////////////////
 router.get('/properties', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.getModelviewProperties(req.query.urn, req.query.guid)
         .then(function (data) {
@@ -122,7 +127,7 @@ router.get('/properties', function (req, res) {
 // file format which are associated with the model file
 /////////////////////////////////////////////////////////////////
 router.get('/download-old', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.getDerivativeManifest(req.query.urn, req.query.derUrn)
         .then(function (data) {
@@ -137,7 +142,7 @@ router.get('/download-old', function (req, res) {
 });
 
 router.get('/download', function (req, res) {
-    var derivatives = getForgeMD(req);
+    var derivatives = getForgeMD(req, res);
 
     derivatives.getManifest(req.params.urn)
         .then(function (data) {

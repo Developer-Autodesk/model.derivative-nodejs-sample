@@ -14,6 +14,91 @@ var config = require('./config');
 
 var forgeDM = require('forge-data-management');
 
+function getForgeDM(req, res) {
+    var tokenSession = new token(req.session);
+    forgeDM.ApiClient.instance.authentications ['oauth2_access_code'].accessToken =
+        tokenSession.getTokenInternal();
+
+    if (!tokenSession.isAuthorized()) {
+        res.status(401).json({error: 'Please login first'});
+        return null;
+    }
+
+    return forgeDM;
+}
+
+router.post('/files', jsonParser, function (req, res) {
+    var fileName = '';
+    var form = new formidable.IncomingForm();
+
+    if (!getForgeDM(req, res))
+        return;
+
+
+
+    form
+        .on('field', function (field, value) {
+            console.log(field, value);
+        })
+        .on('file', function (field, file) {
+            console.log(field, file);
+            fs.rename(file.path, form.uploadDir + '/' + file.name);
+            fileName = file.name;
+        })
+        .on('end', function () {
+            console.log('-> upload done');
+            if (fileName == '') {
+                res.status(500).end('No file submitted!');
+            }
+
+            // Now upload it to OSS
+            var bucketCreationData = {
+                bucketKey: bucketName,
+                servicesAllowed: {},
+                policyKey: 'transient'
+            };
+
+            // Getting a new key
+            lmv.initialize().then(
+                // initialize success
+                function () {
+                    // Getting the bucket
+                    lmv.getBucket(bucketName, true, bucketCreationData).then(
+                        // getBucket success
+                        function () {
+                            // Uploading the file
+                            var tmpFileName = path.join(form.uploadDir, fileName);
+                            lmv.upload(
+                                tmpFileName,
+                                bucketName,
+                                fileName).then(
+                                // upload success
+                                function (uploadInfo) {
+                                    // Send back the data
+                                    res.json(uploadInfo);
+                                },
+                                // upload error
+                                function (err) {
+                                    res.status(500).end('Could not upload file into bucket!');
+                                }
+                            );
+                        },
+                        // getBucket error
+                        function (err) {
+                            res.status(500).end('Could not create bucket for file!');
+                        }
+                    );
+                },
+                // initialize error
+                function (err) {
+                    res.status(500).end('Could not get access token!');
+                }
+            );
+        });
+
+    form.parse(req);
+});
+
 /////////////////////////////////////////////////////////////////
 // Provide information to the tree control on the client
 // about the hubs, projects, folders and files we have on
@@ -23,8 +108,8 @@ router.get('/treeNode', function (req, res) {
     var href = decodeURIComponent(req.query.href);
     console.log("treeNode for " + href);
 
-    var tokenSession = new token(req.session);
-    forgeDM.ApiClient.instance.authentications ['oauth2_access_code'].accessToken = tokenSession.getTokenInternal();
+    if (!getForgeDM(req, res))
+        return;
 
     if (href === '#') {
         // # stands for ROOT

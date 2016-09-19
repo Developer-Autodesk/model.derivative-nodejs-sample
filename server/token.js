@@ -38,4 +38,8 @@ Token.prototype.setTokenPublic = function (token) {
     this._session.tokenpublic = token;
 };
 
+Token.prototype.isAuthorized = function () {
+    return (this._session.tokenpublic != null);
+};
+
 module.exports = Token;
