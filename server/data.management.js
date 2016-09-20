@@ -10,13 +10,18 @@ var router = express.Router();
 var bodyParser = require('body-parser');
 var jsonParser = bodyParser.json();
 
+var formidable = require('formidable');
+var path = require('path');
+var fs = require('fs');
+
 var config = require('./config');
 
 var forgeDM = require('forge-data-management');
+var forgeOSS = require('forge-oss');
 
-function getForgeDM(req, res) {
+function setToken(forge, req, res) {
     var tokenSession = new token(req.session);
-    forgeDM.ApiClient.instance.authentications ['oauth2_access_code'].accessToken =
+    forge.ApiClient.instance.authentications ['oauth2_access_code'].accessToken =
         tokenSession.getTokenInternal();
 
     if (!tokenSession.isAuthorized()) {
@@ -24,80 +29,201 @@ function getForgeDM(req, res) {
         return null;
     }
 
-    return forgeDM;
+    return forge;
 }
 
 router.post('/files', jsonParser, function (req, res) {
     var fileName = '';
     var form = new formidable.IncomingForm();
 
-    if (!getForgeDM(req, res))
+    if (!setToken(forgeDM, req, res))
         return;
 
+    // Find out the project where we have to upload the file
+    var href = decodeURIComponent(req.header('wip-href'));
+    var params = href.split('/');
+    var projectId = params[params.length - 3];
+    var versionId = params[params.length - 1];
+    var uploadedFile;
 
+    // Receive the file
+    var fileData;
+
+    /*
+    form.onPart = function(part) {
+        part.addListener('data', function() {
+
+        });
+    }
+    */
 
     form
+        .on('data', function(data) {
+            fileData = data;
+        })
+
         .on('field', function (field, value) {
             console.log(field, value);
         })
         .on('file', function (field, file) {
             console.log(field, file);
-            fs.rename(file.path, form.uploadDir + '/' + file.name);
-            fileName = file.name;
+            //fs.rename(file.path, form.uploadDir + '/' + file.name);
+            uploadedFile = file;
         })
         .on('end', function () {
-            console.log('-> upload done');
-            if (fileName == '') {
+            console.log('-> file received');
+            if (uploadedFile.name == '') {
                 res.status(500).end('No file submitted!');
             }
 
-            // Now upload it to OSS
-            var bucketCreationData = {
-                bucketKey: bucketName,
-                servicesAllowed: {},
-                policyKey: 'transient'
-            };
+            // Create file on A360
+            var versions = new forgeDM.VersionsApi();
+            versions.getVersion(projectId, versionId)
+                .then(function (versionData) {
+                    var itemId = versionData.data.relationships.item.data.id;
 
-            // Getting a new key
-            lmv.initialize().then(
-                // initialize success
-                function () {
-                    // Getting the bucket
-                    lmv.getBucket(bucketName, true, bucketCreationData).then(
-                        // getBucket success
-                        function () {
-                            // Uploading the file
-                            var tmpFileName = path.join(form.uploadDir, fileName);
-                            lmv.upload(
-                                tmpFileName,
-                                bucketName,
-                                fileName).then(
-                                // upload success
-                                function (uploadInfo) {
-                                    // Send back the data
-                                    res.json(uploadInfo);
-                                },
-                                // upload error
-                                function (err) {
-                                    res.status(500).end('Could not upload file into bucket!');
-                                }
-                            );
-                        },
-                        // getBucket error
-                        function (err) {
-                            res.status(500).end('Could not create bucket for file!');
-                        }
-                    );
-                },
-                // initialize error
-                function (err) {
-                    res.status(500).end('Could not get access token!');
-                }
-            );
+                    var items = new forgeDM.ItemsApi();
+                    items.getItem(projectId, itemId)
+                        .then(function (itemData) {
+                            var folderId = itemData.data.relationships.parent.data.id;
+
+                            var projects = new forgeDM.ProjectsApi();
+                            projects.postStorage(projectId, JSON.stringify(storageSpecData(uploadedFile.name, folderId)))
+                                .then(function (storage) {
+                                    var objectId = storage.data.id;
+                                    var bucketKeyObjectName = getBucketKeyObjectName(objectId);
+
+                                    setToken(forgeOSS, req, res);
+
+                                    fs.readFile(uploadedFile.path, function (err, fileData ) {
+                                        var objects = new forgeOSS.ObjectsApi();
+                                        objects.uploadObject(bucketKeyObjectName.bucketKey, bucketKeyObjectName.objectName, uploadedFile.size, fileData)
+                                            .then(function (data) {
+                                                console.log('uploadObject succeeded');
+                                                projects.postItem(projectId, JSON.stringify(versionSpecData(uploadedFile.name, folderId, objectId)))
+                                                    .then(function (version) {
+                                                        res.status(200).json({file: version.data.attributes.displayName});
+                                                    })
+                                                    .catch(function (error) {
+                                                        console.log('postItem failed');
+                                                        res.status(500).end('postItem failed');
+                                                    });
+                                            })
+                                            .catch(function (error) {
+                                                console.log('uploadObject failed');
+                                                res.status(500).end('uploadObject failed');
+                                            });
+                                    });
+                                })
+                                .catch(function(error) {
+                                    res.status(500).end('postStorage failed');
+                                });
+
+                        })
+                        .catch (function (error) {
+                            res.status(500).end('getItem failed');
+                        });
+                })
+                .catch(function (error) {
+                    console.log(error);
+                    res.status(500).end('getVersion failed');
+                });
         });
 
     form.parse(req);
 });
+
+function getBucketKeyObjectName(objectId) {
+    // the objectId comes in the form of
+    // urn:adsk.objects:os.object:BUCKET_KEY/OBJECT_NAME
+    var objectIdParams = objectId.split('/');
+    var objectNameValue = objectIdParams[objectIdParams.length - 1];
+    // then split again by :
+    var bucketKeyParams = objectIdParams[objectIdParams.length - 2].split(':');
+    // and get the BucketKey
+    var bucketKeyValue = bucketKeyParams[bucketKeyParams.length - 1];
+
+    var ret =
+    {
+        bucketKey: bucketKeyValue,
+        objectName: objectNameValue
+    };
+    return ret;
+}
+
+function storageSpecData(fileName, folderId) {
+    var storageSpecs =
+    {
+        data: {
+            type: 'objects',
+            attributes: {
+                name: fileName
+            },
+            relationships: {
+                target: {
+                    data: {
+                        type: 'folders',
+                        id: folderId
+                    }
+                }
+            }
+        }
+    };
+    return storageSpecs;
+}
+
+function versionSpecData(filename, folderId, objectId) {
+    var versionSpec =
+    {
+        jsonapi: {
+            version: "1.0"
+        },
+        data: [
+            {
+                type: "items",
+                attributes: {
+                    name: filename,
+                    extension: {
+                        type: "items:autodesk.core:File",
+                        version: "1.0"
+                    }
+                },
+                relationships: {
+                    tip: {
+                        data: {
+                            type: "versions",
+                            id: "1"
+                        }
+                    },
+                    parent: {
+                        data: {
+                            type: "folders",
+                            id: folderId
+                        }
+                    }
+                }
+            }
+        ],
+        included: [
+            {
+                type: "versions",
+                id: "1",
+                attributes: {
+                    name: filename
+                },
+                relationships: {
+                    storage: {
+                        data: {
+                            type: "objects",
+                            id: objectId
+                        }
+                    }
+                }
+            }
+        ]
+    };
+    return versionSpec;
+}
 
 /////////////////////////////////////////////////////////////////
 // Provide information to the tree control on the client
@@ -108,7 +234,7 @@ router.get('/treeNode', function (req, res) {
     var href = decodeURIComponent(req.query.href);
     console.log("treeNode for " + href);
 
-    if (!getForgeDM(req, res))
+    if (!setToken(forgeDM, req, res))
         return;
 
     if (href === '#') {

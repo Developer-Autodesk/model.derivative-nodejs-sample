@@ -33,7 +33,7 @@ $(document).ready(function () {
         $.ajax ({
             url: '/dm/files',
             type: 'POST',
-            headers: { 'x-file-name': fileName },
+            headers: { 'x-file-name': fileName, 'wip-href': MyVars.selectedNode.original.href },
             data: data,
             cache: false,
             processData: false, // Don't process the files
@@ -60,7 +60,6 @@ $(document).ready(function () {
     }
     else {
         MyVars.token3Leg = token;
-        //MyVars.token2Leg = get2LegToken();
 
         auth.html('You\'re logged in');
         auth.click(function () {
@@ -104,12 +103,6 @@ function base64encode(str) {
     return ret2;
 }
 
-function getToken() {
-    var token = makeSyncRequest('/api/token');
-    if (token != '') console.log('Get current token: ' + token);
-    return token;
-}
-
 function signIn() {
     jQuery.ajax({
         url: '/user/authenticate',
@@ -139,32 +132,6 @@ function get3LegToken() {
     });
     if (token != '') console.log('3 legged token (User Authorization): ' + token); // debug
     return token;
-}
-
-function get2LegToken() {
-    var token = makeSyncRequest('/api/2LegToken');
-    console.log('2 legged token (Developer Authentication): ' + token);
-    return token;
-}
-
-function useToken(token) {
-    $.ajax({
-        url: '/api/token',
-        type: 'POST',
-        contentType: 'application/json',
-        dataType: 'json',
-        data: JSON.stringify({
-            'token': token
-        })
-    });
-}
-
-function makeSyncRequest(url) {
-    var xmlHttp = null;
-    xmlHttp = new XMLHttpRequest();
-    xmlHttp.open("GET", url, false);
-    xmlHttp.send(null);
-    return xmlHttp.responseText;
 }
 
 // http://stackoverflow.com/questions/4068373/center-a-popup-window-on-screen
@@ -626,14 +593,6 @@ function prepareFilesTree() {
             MyVars.keepTrying = true;
             MyVars.selectedNode = data.node;
 
-            // E.g. because of the file upload we might have gotten a 2 legged
-            // token, now we need a 3 legged again... ?
-            if (data.node.type === 'files') {
-                useToken(MyVars.token2Leg);
-            } else {
-                useToken(MyVars.token3Leg);
-            }
-
             // Clear hierarchy tree
             $('#forgeHierarchy').empty().jstree('destroy');
 
@@ -677,9 +636,6 @@ function prepareFilesTree() {
         } else {
             $("#deleteManifest").attr('disabled', 'disabled');
             $("#deleteFile").attr('disabled', 'disabled');
-
-            // Switch back to 3 legged
-            useToken(MyVars.token3Leg);
 
             // Just open the children of the node, so that it's easier
             // to find the actual versions
@@ -952,6 +908,7 @@ function loadDocument(viewer, documentId) {
         function (errorMsg) {
             showThumbnail(documentId.substr(4, documentId.length - 1));
         },
+        // temporary workaround
         {
             'oauth2AccessToken': get3LegToken(),
             'x-ads-acm-namespace': 'WIPDM',
