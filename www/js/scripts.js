@@ -888,14 +888,13 @@ function initializeViewer(urn) {
     Autodesk.Viewing.Initializer(
         options,
         function () {
-            MyVars.viewer.initialize();
+            MyVars.viewer.start();
             loadDocument(MyVars.viewer, options.document);
         }
     );
 }
 
 function loadDocument(viewer, documentId) {
-    //viewer.start(
     Autodesk.Viewing.Document.load(
         documentId,
         // onLoad
