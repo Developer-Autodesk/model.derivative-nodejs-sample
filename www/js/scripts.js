@@ -123,6 +123,7 @@ function logoff() {
 
 function get3LegToken() {
     var token = '';
+    console.log('Using synchronous request because of the viewer');
     jQuery.ajax({
         url: '/user/token',
         success: function (res) {
@@ -263,7 +264,7 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
         }
     }).fail(function(err) {
         showProgress("Could not start translation", "fail");
-        console.log('/api/export call failed\n' + err.statusText);
+        console.log('/md/export call failed\n' + err.statusText);
     });
 }
 
@@ -291,7 +292,7 @@ function getMetadata(urn, onsuccess) {
             }
         }
     }).fail(function(err) {
-        console.log('GET /api/metadata call failed\n' + err.statusText);
+        console.log('GET /md/metadata call failed\n' + err.statusText);
     });
 }
 
@@ -324,7 +325,7 @@ function getHierarchy(urn, guid, onsuccess) {
             onsuccess(data);
         }
     }).fail(function(err) {
-        console.log('GET /api/hierarchy call failed\n' + err.statusText);
+        console.log('GET /md/hierarchy call failed\n' + err.statusText);
     });
 }
 
@@ -389,10 +390,9 @@ function delManifest(urn, onsuccess) {
         type: 'DELETE'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
-        if (json.status === 'success') {
+        if (data.status === 'success') {
             if (onsuccess !== undefined) {
-                onsuccess(json);
+                onsuccess(data);
             }
         }
     }).fail(function(err) {
@@ -757,6 +757,7 @@ function prepareHierarchyTree(urn, guid, json) {
 
             fetchProperties(urn, guid, function (props) {
                 preparePropertyTree(urn, guid, objectId, props);
+                selectInViewer(objectId);
             });
         }
     });
@@ -915,6 +916,10 @@ function loadDocument(viewer, documentId) {
             'x-ads-acm-check-groups': 'true',
         }
     )
+}
+
+function selectInViewer(objectId) {
+    MyVars.viewer.select([objectId]);
 }
 
 function showThumbnail(urn) {

@@ -49,14 +49,6 @@ router.post('/files', jsonParser, function (req, res) {
     // Receive the file
     var fileData;
 
-    /*
-    form.onPart = function(part) {
-        part.addListener('data', function() {
-
-        });
-    }
-    */
-
     form
         .on('data', function(data) {
             fileData = data;
@@ -67,14 +59,14 @@ router.post('/files', jsonParser, function (req, res) {
         })
         .on('file', function (field, file) {
             console.log(field, file);
-            //fs.rename(file.path, form.uploadDir + '/' + file.name);
             uploadedFile = file;
         })
         .on('end', function () {
-            console.log('-> file received');
             if (uploadedFile.name == '') {
                 res.status(500).end('No file submitted!');
             }
+
+            console.log('-> file received');
 
             // Create file on A360
             var versions = new forgeDM.VersionsApi();
