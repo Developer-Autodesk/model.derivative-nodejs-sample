@@ -5,10 +5,6 @@ var MyVars = {
 $(document).ready(function () {
     //debugger;
 
-    // Get the tokens
-    var token = get3LegToken();
-    var auth = $("#authenticate");
-
     // Delete uploaded file
     $("#deleteFile").click(function(evt) {
         $.ajax({
@@ -55,25 +51,29 @@ $(document).ready(function () {
         $("#forgeUploadHidden").trigger("click");
     });
 
-    if (token === '') {
-        auth.click(signIn);
-    }
-    else {
-        MyVars.token3Leg = token;
+    // Get the tokens
+    get3LegToken(function(token) {
+        var auth = $("#authenticate");
 
-        auth.html('You\'re logged in');
-        auth.click(function () {
-            if (confirm("You're logged in and your token is " + token + '\nWould you like to log out?')) {
-                logoff();
-            }
-        });
+        if (token === '') {
+            auth.click(signIn);
+        } else {
+            MyVars.token3Leg = token;
 
-        // Fill the tree with A360 items
-        prepareFilesTree();
+            auth.html('You\'re logged in');
+            auth.click(function () {
+                if (confirm("You're logged in and your token is " + token + '\nWould you like to log out?')) {
+                    logoff();
+                }
+            });
 
-        // Download list of available file formats
-        fillFormats();
-    }
+            // Fill the tree with A360 items
+            prepareFilesTree();
+
+            // Download list of available file formats
+            fillFormats();
+        }
+    });
 
     $('#progressInfo').click(function() {
         MyVars.keepTrying = false;
@@ -121,18 +121,25 @@ function logoff() {
     });
 }
 
-function get3LegToken() {
-    var token = '';
-    console.log('Using synchronous request because of the viewer');
-    jQuery.ajax({
-        url: '/user/token',
-        success: function (res) {
-            token = res;
-        },
-        async: false // this request must be synchronous for the Forge Viewer
-    });
-    if (token != '') console.log('3 legged token (User Authorization): ' + token); // debug
-    return token;
+function get3LegToken(callback) {
+
+    if (callback) {
+        jQuery.ajax({
+            url: '/user/token',
+            success: function (res) {
+                MyVars.token3Leg = res;
+                if (callback) {
+                    callback(MyVars.token3Leg, 1000);
+                    console.log('Returning new 3 legged token (User Authorization): ' + MyVars.token3Leg);
+                }
+            },
+            async: true
+        });
+    } else {
+        console.log('Returning saved 3 legged token (User Authorization): ' + MyVars.token3Leg);
+
+        return MyVars.token3Leg;
+    }
 }
 
 // http://stackoverflow.com/questions/4068373/center-a-popup-window-on-screen
@@ -763,6 +770,10 @@ function prepareHierarchyTree(urn, guid, json) {
     });
 }
 
+function selectInHierarchyTree(objectIds) {
+    //MyVars.viewer.select([objectId]);
+}
+
 /////////////////////////////////////////////////////////////////
 // Property Tree / #forgeProperties
 // Shows the properties of the selected sub-component
@@ -884,6 +895,7 @@ function initializeViewer(urn) {
 }
 
 function loadDocument(viewer, documentId) {
+    //viewer.start(
     Autodesk.Viewing.Document.load(
         documentId,
         // onLoad
@@ -904,6 +916,12 @@ function loadDocument(viewer, documentId) {
 
             if (geometryItems.length > 0)
                 viewer.load(doc.getViewablePath(geometryItems[0]), null, null, null, doc.acmSessionId /*session for DM*/);
+
+            viewer.addEventListener(
+                Autodesk.Viewing.SELECTION_CHANGED_EVENT,
+                function (event) {
+                    selectInHierarchyTree(event.dbIdArray);
+                });
         },
         // onError
         function (errorMsg) {
