@@ -426,16 +426,6 @@ function getFormats(onsuccess) {
     });
 }
 
-// Filter the list so that it contains only the nodes
-// whose parent is not selected
-function getOnlyParents(nodeIds) {
-    var hierarchy = $("#forgeHierarchy");
-
-    $.each(nodeIds, function (index, value) {
-
-    });
-}
-
 function fillFormats() {
     getFormats(function(data) {
         var forgeFormats = $("#forgeFormats");
@@ -510,7 +500,7 @@ function fillFormats() {
 
         var deleteManifest = $("#deleteManifest");
         deleteManifest.click(function() {
-            var elem = $("#forgeHierarchy");
+            //var elem = $("#forgeHierarchy");
             var urn = MyVars.selectedUrn;
 
             cleanupViewer();
@@ -769,7 +759,21 @@ function prepareHierarchyTree(urn, guid, json) {
 }
 
 function selectInHierarchyTree(objectIds) {
-    //MyVars.viewer.select([objectId]);
+    var tree = $("#forgeHierarchy").jstree();
+
+    // First remove all the selection
+    tree.uncheck_all();
+
+    // Now select the newly selected items
+    for (var key in objectIds) {
+        var id = objectIds[key];
+
+        // Select the node
+        tree.check_node(id);
+
+        // Make sure that it is visible for the user
+        tree._open_to(id);
+    }
 }
 
 /////////////////////////////////////////////////////////////////
@@ -934,7 +938,9 @@ function loadDocument(viewer, documentId) {
 }
 
 function selectInViewer(objectId) {
-    MyVars.viewer.select([objectId]);
+    if (MyVars.viewer) {
+        MyVars.viewer.select([objectId]);
+    }
 }
 
 function showThumbnail(urn) {
