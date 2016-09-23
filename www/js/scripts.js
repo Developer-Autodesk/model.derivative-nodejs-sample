@@ -55,7 +55,7 @@ $(document).ready(function () {
     get3LegToken(function(token) {
         var auth = $("#authenticate");
 
-        if (token === '') {
+        if (!token) {
             auth.click(signIn);
         } else {
             MyVars.token3Leg = token;
@@ -127,11 +127,9 @@ function get3LegToken(callback) {
         jQuery.ajax({
             url: '/user/token',
             success: function (res) {
-                MyVars.token3Leg = res;
-                if (callback) {
-                    callback(MyVars.token3Leg, 1000);
-                    console.log('Returning new 3 legged token (User Authorization): ' + MyVars.token3Leg);
-                }
+                MyVars.token3Leg = res.token;
+                callback(MyVars.token3Leg, res.expires_in);
+                console.log('Returning new 3 legged token (User Authorization): ' + MyVars.token3Leg);
             },
             async: true
         });

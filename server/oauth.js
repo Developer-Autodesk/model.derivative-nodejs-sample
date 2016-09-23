@@ -60,7 +60,7 @@ router.get('/user/profile', function (req, res) {
 // the public token should have a limited scope (read-only)
 router.get('/user/token', function (req, res) {
     var tokenSession = new token(req.session);
-    res.end(tokenSession.getTokenPublic());
+    res.json({ token: tokenSession.getTokenPublic(), expires_in: tokenSession.getExpiresInPublic() });
 });
 
 // return the forge authenticate url
@@ -91,6 +91,7 @@ router.get('/callback/autodesk', function (req, res) {
             oauth3legged.refreshtoken(config.credentials.client_id, config.credentials.client_secret, 'refresh_token', data.refresh_token, config.scopePublic)
                 .then(function (data) {
                     tokenSession.setTokenPublic(data.access_token);
+                    tokenSession.setExpiresInPublic(data.expires_in);
                     console.log('Public token (limited scope): ' + tokenSession.getTokenPublic()); // debug
                     res.redirect('/');
                 })

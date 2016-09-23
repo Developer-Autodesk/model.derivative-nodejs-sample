@@ -38,6 +38,14 @@ Token.prototype.setTokenPublic = function (token) {
     this._session.tokenpublic = token;
 };
 
+Token.prototype.getExpiresInPublic = function () {
+    return this._session.expiresinpublic;
+};
+
+Token.prototype.setExpiresInPublic = function (exp) {
+    this._session.expiresinpublic = exp;
+};
+
 Token.prototype.isAuthorized = function () {
     return (this._session.tokenpublic != null);
 };
