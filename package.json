@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/augustogoncalves/forge-3leg.nodejs-template"
+    "url": "git://github.com/adamenagy/model.derivative.api-nodejs-sample"
   },
   "scripts": {
     "start" : "NODE_ENV=production node start.js",

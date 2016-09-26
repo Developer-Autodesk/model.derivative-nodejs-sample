@@ -1,6 +1,6 @@
 {
-  "name": "forge-3leg.nodejs-template",
-  "description": "Basic template for Autodesk Forge NodeJS apps with 3 legged OAuth",
+  "name": "ModelDerivative.API.sample",
+  "description": "Basic Node.js sample for the Model Derivative API",
   "repository": "https://github.com/adamenagy/model.derivative.api-nodejs-sample",
   "logo": "https://avatars0.githubusercontent.com/u/8017462?v=3&s=200",
   "keywords": [
