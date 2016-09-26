@@ -66,6 +66,12 @@ You can also upload files to the web app's own bucket storage to use the **Model
 
 Here is a video showing it in action: [http://www.youtube.com/watch?v=0o7o7NA69qk](http://www.youtube.com/watch?v=0o7o7NA69qk)
 
+## Deploy on Heroku
+
+To deploy this application to Heroku, the <b>Callback URL</b> & <b>redirect_uri</b> must use your .herokuapp.com address. After clicking on the button below, at the Heroku Create New App page, set your Client ID & Secret and the correct callback URL.
+
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
+
 ## License
 
 This sample is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT).
