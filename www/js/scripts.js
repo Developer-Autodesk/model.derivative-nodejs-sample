@@ -868,9 +868,12 @@ function preparePropertyTree(urn, guid, objectId, props) {
 function cleanupViewer() {
     // Clean up previous instance
     if (MyVars.viewer) {
-        MyVars.viewer.finish();
-        $('#forgeViewer').html('');
-        MyVars.viewer = null;
+        try {
+            MyVars.viewer.finish();
+        } finally {
+            $('#forgeViewer').html('');
+            MyVars.viewer = null;
+        }
     }
 }
 
