@@ -28,10 +28,6 @@
     "dev": "node start.js",
     "nodemon": "nodemon start.js --ignore www/"
   },
-  "engines": {
-    "node": "6.2.0",
-    "npm": "3.8.9"
-  },
   "author": "Forge Partner Development",
   "license": "MIT"
 }
