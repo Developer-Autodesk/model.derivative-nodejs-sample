@@ -19,7 +19,7 @@
     },
     "FORGE_CALLBACK_URL": {
       "description": "Callback URL of your app, required for 3-legged OAuth",
-      "value": "https://<<YOUR HEROKU APP NAME HERE>>.herokuapp.com/callback/autodesk"
+      "value": "https://<<YOUR HEROKU APP NAME HERE>>.herokuapp.com/api/forge/callback/oauth"
     }
   },
   "website": "https://developer.autodesk.com/",
