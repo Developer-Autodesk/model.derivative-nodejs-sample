@@ -1,5 +1,6 @@
 var MyVars = {
-    keepTrying: true
+    keepTrying: true,
+    initialized: false
 };
 
 $(document).ready(function () {
@@ -128,8 +129,8 @@ function get3LegToken(callback) {
             url: '/user/token',
             success: function (res) {
                 MyVars.token3Leg = res.token;
-                callback(MyVars.token3Leg, res.expires_in);
                 console.log('Returning new 3 legged token (User Authorization): ' + MyVars.token3Leg);
+                callback(res.token, res.expires_in);
             },
             async: true
         });
@@ -445,8 +446,7 @@ function fillFormats() {
             var guid = MyVars.selectedGuid;
             var fileName = rootNode.text + "." + format;
             var rootFileName = MyVars.rootFileName;
-            var nodeIds = elem.jstree("get_checked",null,true);
-            //nodeIds = getOnlyParents(nodeIds);
+            var nodeIds = elem.jstree("get_checked", null, true);
 
             // Only OBJ supports subcomponent selection
             // using objectId's
@@ -500,7 +500,6 @@ function fillFormats() {
 
         var deleteManifest = $("#deleteManifest");
         deleteManifest.click(function() {
-            //var elem = $("#forgeHierarchy");
             var urn = MyVars.selectedUrn;
 
             cleanupViewer();
@@ -572,7 +571,7 @@ function prepareFilesTree() {
                 'icon': 'glyphicon glyphicon-time'
             }
         },
-        "plugins": ["types", "state"] // let's not use sort: , "sort"]
+        "plugins": ["types"] // let's not use sort: , "state" and "sort"]
     }).bind("select_node.jstree", function (evt, data) {
         // Clean up previous instance
         cleanupViewer();
@@ -667,8 +666,6 @@ function showHierarchy(urn, guid, objectIds, rootFileName, fileExtType) {
             getHierarchy(urn, guid, function (data) {
                 showProgress("Retrieved hierarchy", "success");
 
-                prepareHierarchyTree(urn, guid, data.data);
-
                 for (var derId in manifest.derivatives) {
                     var der = manifest.derivatives[derId];
                     // We just have to make sure there is an svf
@@ -679,6 +676,8 @@ function showHierarchy(urn, guid, objectIds, rootFileName, fileExtType) {
                         initializeViewer(urn);
                     }
                 }
+
+                prepareHierarchyTree(urn, guid, data.data);
             });
         });
     });
@@ -740,7 +739,7 @@ function prepareHierarchyTree(urn, guid, json) {
                 'icon': 'glyphicon glyphicon-save-file'
             }
         },
-        "plugins": ["types", "state", "sort", "checkbox", "ui", "themes"]
+        "plugins": ["types", "sort", "checkbox", "ui", "themes"]
     }).bind("select_node.jstree", function (evt, data) {
         if (data.node.type === 'object') {
             var urn = MyVars.selectedUrn;
@@ -752,13 +751,31 @@ function prepareHierarchyTree(urn, guid, json) {
 
             fetchProperties(urn, guid, function (props) {
                 preparePropertyTree(urn, guid, objectId, props);
-                selectInViewer(objectId);
+                selectInViewer([objectId]);
             });
+        }
+    }).bind("check_node.jstree uncheck_node.jstree", function (evt, data) {
+        // To avoid recursion we are checking if the changes are
+        // caused by a viewer selection which is calling
+        // selectInHierarchyTree()
+        if (!MyVars.selectingInHierarchyTree) {
+            var elem = $('#forgeHierarchy');
+            var nodeIds = elem.jstree("get_checked", null, true);
+
+            // Convert from strings to numbers
+            var objectIds = [];
+            $.each(nodeIds, function (index, value) {
+                objectIds.push(parseInt(value, 10));
+            });
+
+            selectInViewer(objectIds);
         }
     });
 }
 
 function selectInHierarchyTree(objectIds) {
+    MyVars.selectingInHierarchyTree = true;
+
     var tree = $("#forgeHierarchy").jstree();
 
     // First remove all the selection
@@ -774,6 +791,8 @@ function selectInHierarchyTree(objectIds) {
         // Make sure that it is visible for the user
         tree._open_to(id);
     }
+
+    MyVars.selectingInHierarchyTree = false;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -853,7 +872,7 @@ function preparePropertyTree(urn, guid, objectId, props) {
                 'icon': 'glyphicon glyphicon-folder-open'
             }
         },
-        "plugins": ["types", "state", "sort"]
+        "plugins": ["types", "sort"]
     }).bind("activate_node.jstree", function (evt, data) {
        //
     });
@@ -867,13 +886,11 @@ function preparePropertyTree(urn, guid, objectId, props) {
 
 function cleanupViewer() {
     // Clean up previous instance
-    if (MyVars.viewer) {
-        try {
-            MyVars.viewer.finish();
-        } finally {
-            $('#forgeViewer').html('');
-            MyVars.viewer = null;
-        }
+    if (MyVars.viewer && MyVars.viewer.model) {
+        console.log("Unloading current model from Autodesk Viewer");
+
+        MyVars.viewer.impl.unloadModel(MyVars.viewer.model);
+        MyVars.viewer.impl.sceneUpdated(true);
     }
 }
 
@@ -885,18 +902,30 @@ function initializeViewer(urn) {
     var options = {
         'document': 'urn:' + urn,
         'env': 'AutodeskProduction',
-        'getAccessToken': get3LegToken
+        'getAccessToken': get3LegToken // this works fine, but if I pass get3LegToken it only works the first time
     };
 
-    var viewerElement = document.getElementById('forgeViewer');
-    MyVars.viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerElement, {});
-    Autodesk.Viewing.Initializer(
-        options,
-        function () {
-            MyVars.viewer.start();
-            loadDocument(MyVars.viewer, options.document);
-        }
-    );
+    if (MyVars.viewer) {
+        loadDocument(MyVars.viewer, options.document);
+    } else {
+        var viewerElement = document.getElementById('forgeViewer');
+        MyVars.viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerElement, {});
+        Autodesk.Viewing.Initializer(
+            options,
+            function () {
+                MyVars.viewer.start(); // this would be needed if we also want to load extensions
+                loadDocument(MyVars.viewer, options.document);
+            }
+        );
+    }
+}
+
+function addSelectionListener(viewer) {
+    viewer.addEventListener(
+        Autodesk.Viewing.SELECTION_CHANGED_EVENT,
+        function (event) {
+            selectInHierarchyTree(event.dbIdArray);
+        });
 }
 
 function loadDocument(viewer, documentId) {
@@ -918,31 +947,54 @@ function loadDocument(viewer, documentId) {
                     'role': '2d'
                 }, true);
 
-            if (geometryItems.length > 0)
-                viewer.load(doc.getViewablePath(geometryItems[0]), null, null, null, doc.acmSessionId /*session for DM*/);
+            if (geometryItems.length > 0) {
+                var path = doc.getViewablePath(geometryItems[0]);
+                //viewer.load(doc.getViewablePath(geometryItems[0]), null, null, null, doc.acmSessionId /*session for DM*/);
+                var options = {};
+                viewer.loadModel(path, options);
+            }
 
-            viewer.addEventListener(
-                Autodesk.Viewing.SELECTION_CHANGED_EVENT,
-                function (event) {
-                    selectInHierarchyTree(event.dbIdArray);
-                });
+            addSelectionListener(viewer);
         },
         // onError
         function (errorMsg) {
-            showThumbnail(documentId.substr(4, documentId.length - 1));
-        },
+            //showThumbnail(documentId.substr(4, documentId.length - 1));
+        }
+        /*
+        ,
         // temporary workaround
         {
             'oauth2AccessToken': get3LegToken(),
             'x-ads-acm-namespace': 'WIPDM',
             'x-ads-acm-check-groups': 'true',
         }
+        */
     )
 }
 
-function selectInViewer(objectId) {
+function getAllDbIdsFromRoot(root) {
+    var allDbIds = [];
+    if (!root) {
+        return allDbIds;
+    }
+    var queue = [];
+    queue.push(root); //push the root into queue
+    while (queue.length > 0) {
+        var node = queue.shift(); // the current node
+        allDbIds.push(node.dbId);
+        if (node.children) {
+            // put all the children in the queue too
+            for (var i = 0; i < node.children.length; i++) {
+                queue.push(node.children[i]);
+            }
+        }
+    };
+    return allDbIds;
+};
+
+function selectInViewer(objectIds) {
     if (MyVars.viewer) {
-        MyVars.viewer.select([objectId]);
+        MyVars.viewer.select(objectIds);
     }
 }
 

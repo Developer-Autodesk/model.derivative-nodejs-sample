@@ -234,7 +234,8 @@ router.get('/treeNode', function (req, res) {
         var hubs = new forgeDM.HubsApi();
         hubs.getHubs()
             .then(function (data) {
-                res.end(makeTree(data.data, true));
+                //res.end(makeTree(data.data, true));
+                res.json(makeTree(data.data, true));
             })
             .catch(function (error) {
                 console.log(error);
@@ -249,7 +250,11 @@ router.get('/treeNode', function (req, res) {
                 var hubs = new forgeDM.HubsApi();
                 hubs.getHubProjects(resourceId/*hub_id*/)
                     .then(function (projects) {
-                        res.end(makeTree(projects.data, true));
+                        //res.end(makeTree(projects.data, true));
+                        res.json(makeTree(projects.data, true));
+                    })
+                    .catch(function (error) {
+                        console.log(error);
                     });
                 break;
             case 'projects':
@@ -262,7 +267,11 @@ router.get('/treeNode', function (req, res) {
                         var folders = new forgeDM.FoldersApi();
                         folders.getFolderContents(resourceId, rootFolderId)
                             .then(function (folderContents) {
-                                res.end(makeTree(folderContents.data, true));
+                                //res.end(makeTree(folderContents.data, true));
+                                res.json(makeTree(folderContents.data, true));
+                            })
+                            .catch(function (error) {
+                                console.log(error);
                             });
                     })
                     .catch(function (error) {
@@ -275,7 +284,11 @@ router.get('/treeNode', function (req, res) {
                 var folders = new forgeDM.FoldersApi();
                 folders.getFolderContents(projectId, resourceId/*folder_id*/)
                     .then(function (folderContents) {
-                        res.end(makeTree(folderContents.data, true));
+                        //res.end(makeTree(folderContents.data, true));
+                        res.json(makeTree(folderContents.data, true));
+                    })
+                    .catch(function (error) {
+                        console.log(error);
                     });
                 break;
             case 'items':
@@ -284,7 +297,8 @@ router.get('/treeNode', function (req, res) {
                 var items = new forgeDM.ItemsApi();
                 items.getItemVersions(projectId, resourceId/*item_id*/)
                     .then(function (versions) {
-                        res.end(makeTree(versions.data, false));
+                        //res.end(makeTree(versions.data, false));
+                        res.json(makeTree(versions.data, false));
                     })
                     .catch(function (error) {
                         console.log(error);
@@ -297,10 +311,10 @@ router.get('/treeNode', function (req, res) {
 // Collects the information that we need to pass to the
 // file tree object on the client
 /////////////////////////////////////////////////////////////////
-function makeTree(listOf, canHaveChildren, data) {
-    if (!listOf) return '';
+function makeTree(items, canHaveChildren, data) {
+    if (!items) return '';
     var treeList = [];
-    listOf.forEach(function (item, index) {
+    items.forEach(function (item, index) {
         var fileExt = (item.attributes ? item.attributes.fileType : null);
         if (!fileExt && item.attributes && item.attributes.name) {
             var fileNameParts = item.attributes.name.split('.');
@@ -326,7 +340,8 @@ function makeTree(listOf, canHaveChildren, data) {
         treeList.push(treeItem);
     });
 
-    return JSON.stringify(treeList);
+    //return JSON.stringify(treeList);
+    return treeList;
 }
 
 /////////////////////////////////////////////////////////////////

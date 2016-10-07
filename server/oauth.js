@@ -59,6 +59,7 @@ router.get('/user/profile', function (req, res) {
 // return the public token of the current user
 // the public token should have a limited scope (read-only)
 router.get('/user/token', function (req, res) {
+    console.log('Getting user token'); // debug
     var tokenSession = new token(req.session);
     res.json({ token: tokenSession.getTokenPublic(), expires_in: tokenSession.getExpiresInPublic() });
 });
