@@ -1,6 +1,5 @@
 var MyVars = {
-    keepTrying: true,
-    initialized: false
+    keepTrying: true
 };
 
 $(document).ready(function () {
@@ -105,7 +104,7 @@ function base64encode(str) {
 }
 
 function signIn() {
-    jQuery.ajax({
+    $.ajax({
         url: '/user/authenticate',
         success: function (rootUrl) {
             location.href = rootUrl;
@@ -114,7 +113,7 @@ function signIn() {
 }
 
 function logoff() {
-    jQuery.ajax({
+    $.ajax({
         url: '/user/logoff',
         success: function (oauthUrl) {
             location.href = oauthUrl;
@@ -125,7 +124,7 @@ function logoff() {
 function get3LegToken(callback) {
 
     if (callback) {
-        jQuery.ajax({
+        $.ajax({
             url: '/user/token',
             success: function (res) {
                 MyVars.token3Leg = res.token;
