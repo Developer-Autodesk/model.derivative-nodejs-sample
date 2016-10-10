@@ -653,6 +653,36 @@ function prepareFilesTree() {
     });
 }
 
+function downloadAttachment(href, attachmentVersionId) {
+    console.log("downloadAttachment for href=" + href);
+    // fileName = file name you want to use for download
+    var url = window.location.protocol + "//" + window.location.host +
+        "/dm/attachments/" + encodeURIComponent(attachmentVersionId) + "?href=" + encodeURIComponent(href);
+
+    window.open(url,'_blank');
+}
+
+function deleteAttachment(href, attachmentVersionId) {
+    alert("Functionality not available yet");
+    return;
+
+    console.log("deleteAttachment for href=" + href);
+    $.ajax({
+        url: '/dm/attachments/' + encodeURIComponent(attachmentVersionId),
+        headers: { 'wip-href': href },
+        type: 'DELETE'
+    }).done(function (data) {
+        console.log(data);
+        if (data.status === 'success') {
+            if (onsuccess !== undefined) {
+                onsuccess(data);
+            }
+        }
+    }).fail(function(err) {
+        console.log('DELETE /api/manifest call failed\n' + err.statusText);
+    });
+}
+
 function filesTreeContextMenu(node, callback) {
     if (node.type === 'versions') {
         $.ajax({
@@ -668,7 +698,25 @@ function filesTreeContextMenu(node, callback) {
                             "action": function (obj) {
                                 alert(obj.item.label + " with versionId = " + obj.item.versionId);
                             },
-                            "versionId": item.id
+                            "versionId": item.id,
+                            "submenu" : {
+                                "open": {
+                                    "label": "Open",
+                                    "action": function (obj) {
+                                        downloadAttachment(obj.item.href, obj.item.versionId);
+                                    },
+                                    "versionId": item.id,
+                                    "href": node.original.href
+                                },
+                                "delete": {
+                                    "label": "Delete",
+                                    "action": function (obj) {
+                                        deleteAttachment(obj.item.href, obj.item.versionId);
+                                    },
+                                    "versionId": item.id,
+                                    "href": node.original.href
+                                }
+                            }
                         };
 
                         menuItems = menuItems || {};

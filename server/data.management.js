@@ -23,6 +23,8 @@ function setToken(forge, req, res) {
     var tokenSession = new token(req.session);
     forge.ApiClient.instance.authentications ['oauth2_access_code'].accessToken =
         tokenSession.getTokenInternal();
+    forge.ApiClient.instance.authentications ['oauth2_application'].accessToken =
+        tokenSession.getTokenInternal();
 
     if (!tokenSession.isAuthorized()) {
         res.status(401).json({error: 'Please login first'});
@@ -158,6 +160,9 @@ function attachVersionToAnotherVersion(projectId, versionId, attachmentVersionId
 }
 
 router.get('/attachments', function (req, res) {
+    if (!setToken(forgeDM, req, res))
+        return;
+
     var href = decodeURIComponent(req.query.href);
     var params = href.split('/');
     var projectId = params[params.length - 3];
@@ -203,6 +208,75 @@ router.get('/attachments', function (req, res) {
             res.status(error.statusCode).end('getVersionRelationshipsRef: failed');
         });
 });
+
+// Download a specific attachment of an item version
+router.get('/attachments/:attachment', function (req, res) {
+    if (!setToken(forgeDM, req, res) || !setToken(forgeOSS, req, res))
+        return;
+
+    // From the href of the item version that has the attachment
+    // we only need the projectId
+    // req.params.attachment contains the versionId of the attachment
+    var href = decodeURIComponent(req.query.href);
+    var params = href.split('/');
+    var projectId = params[params.length - 3];
+
+    //var versionId = params[params.length - 1];
+
+    var versions = new forgeDM.VersionsApi();
+
+    // Get version info first to find out the OSS location
+    versions.getVersion(projectId, req.params.attachment)
+        .then(function (versionData) {
+            var storageId = versionData.data.relationships.storage.data.id;
+            var storageHref = versionData.data.relationships.storage.meta.link.href;
+            var fileExt = versionData.data.attributes.fileType;
+            var bucketKeyObjectName = getBucketKeyObjectName(storageId);
+
+            var objects = new forgeOSS.ObjectsApi();
+            objects.getObject(bucketKeyObjectName.bucketKey, bucketKeyObjectName.objectName)
+                .then(function (data) {
+                    res.set('content-type', 'application/' + fileExt);
+                    res.set('Content-Disposition', 'attachment; filename="' + versionData.data.attributes.displayName + '"');
+                    res.end(data);
+                })
+                .catch(function (error) {
+                    console.log('getObject: failed');
+                    res.status(error.statusCode).end('getObject: failed');
+                })
+        })
+        .catch(function (error) {
+            console.log('getVersion: failed');
+            res.status(error.statusCode).end('getVersion: failed');
+        });
+});
+
+// Delete the specific attachment relationship between two item versions
+router.delete('/attachments/:attachment', function (req, res) {
+
+    if (!setToken(forgeDM, req, res))
+        return;
+
+    var href = decodeURIComponent(req.header('wip-href'));
+    var params = href.split('/');
+    var projectId = params[params.length - 3];
+    var versionId = params[params.length - 1];
+
+
+    var derivatives = getForgeMD(req, res);
+    if (!derivatives)
+        return;
+
+    derivatives.deleteManifest(req.params.attachment)
+        .then(function (data) {
+            res.json(data);
+        })
+        .catch(function (error) {
+            res.status(error.statusCode).end(error.statusMessage);
+        });
+});
+
+
 
 router.post('/files', jsonParser, function (req, res) {
     // Uploading a file to A360
