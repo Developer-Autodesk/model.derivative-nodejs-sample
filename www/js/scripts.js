@@ -5,20 +5,6 @@ var MyVars = {
 $(document).ready(function () {
     //debugger;
 
-    // Delete uploaded file
-    $("#deleteFile").click(function(evt) {
-        $.ajax({
-            url: '/dm/files/' + encodeURIComponent(MyVars.fileName),
-            type: 'DELETE'
-        }).done(function (data) {
-            console.log(data);
-            var instance = $('#forgeFiles').jstree(true);
-            instance.delete_node(MyVars.selectedNode);
-        }).fail(function(err) {
-            console.log('DELETE /api/myfiles call failed\n' + err.statusText);
-        });
-    });
-
     // Make sure that "change" event is fired
     // even if same file is selected for upload
     $("#forgeUploadHidden").click(function (evt) {
@@ -591,7 +577,7 @@ function prepareFilesTree() {
 
         if (data.node.type === 'versions') {
             $("#deleteManifest").removeAttr('disabled');
-            $("#deleteFile").removeAttr('disabled');
+            $("#uploadFile").removeAttr('disabled');
 
             MyVars.keepTrying = true;
             MyVars.selectedNode = data.node;
@@ -638,7 +624,7 @@ function prepareFilesTree() {
             //initializeViewer(data.node.data);
         } else {
             $("#deleteManifest").attr('disabled', 'disabled');
-            $("#deleteFile").attr('disabled', 'disabled');
+            $("#uploadFile").attr('disabled', 'disabled');
 
             // Just open the children of the node, so that it's easier
             // to find the actual versions
