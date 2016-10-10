@@ -634,7 +634,6 @@ function prepareFilesTree() {
             // data belongs to the clicked model
             $('#forgeHierarchy').empty().jstree('destroy');
             $('#forgeProperties').empty().jstree('destroy');
-            $('#forgeViewer').html('');
         }
     });
 }
@@ -993,6 +992,7 @@ function initializeViewer(urn) {
             function () {
                 MyVars.viewer.start(); // this would be needed if we also want to load extensions
                 loadDocument(MyVars.viewer, options.document);
+                addSelectionListener(MyVars.viewer);
             }
         );
     }
@@ -1031,8 +1031,6 @@ function loadDocument(viewer, documentId) {
                 var options = {};
                 viewer.loadModel(path, options);
             }
-
-            addSelectionListener(viewer);
         },
         // onError
         function (errorMsg) {
@@ -1074,10 +1072,6 @@ function selectInViewer(objectIds) {
     if (MyVars.viewer) {
         MyVars.viewer.select(objectIds);
     }
-}
-
-function showThumbnail(urn) {
-    $('#forgeViewer').html('<img src="/api/getThumbnail?urn=' + urn + '"/>');
 }
 
 /////////////////////////////////////////////////////////////////
