@@ -21,7 +21,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/adamenagy/model.derivative.api-nodejs-sample"
+    "url": "git://github.com/developer-autodesk/model.derivative.api-nodejs-sample"
   },
   "scripts": {
     "start" : "NODE_ENV=production node start.js",
