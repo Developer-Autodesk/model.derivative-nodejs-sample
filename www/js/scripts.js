@@ -650,8 +650,6 @@ function prepareFilesTree() {
             $('#forgeProperties').empty().jstree('destroy');
             $('#forgeViewer').html('');
         }
-    }).bind("contextmenu.jstree", function (evt, data) {
-        var str = ""
     });
 }
 
@@ -662,7 +660,7 @@ function filesTreeContextMenu(node, callback) {
             data: {href: node.original.href},
             type: 'GET',
             success: function (data) {
-                var menuItems = {};
+                var menuItems = null;
                 data.data.forEach(function (item) {
                     if (item.meta.extension.type === "auxiliary:autodesk.core:Attachment") {
                         var menuItem = {
@@ -672,11 +670,17 @@ function filesTreeContextMenu(node, callback) {
                             },
                             "versionId": item.id
                         };
+
+                        menuItems = menuItems || {};
                         menuItems[item.id] = menuItem;
                     }
                 })
 
-                callback(menuItems);
+                if (!menuItems) {
+                    callback({noItem: {label: "No attachments", action: function () {}}});
+                } else {
+                    callback(menuItems);
+                }
             }
         });
     }
