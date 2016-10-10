@@ -2,48 +2,13 @@ var MyVars = {
     keepTrying: true
 };
 
-$(window).unload(function() {
-    $.sessionStorage.set("env", $('#env').val());
-});
-
 $(document).ready(function () {
     //debugger;
-
-    //////////////////////////////////////
-    // Environment variable
-    var env = $.sessionStorage.get("env");
-
-    // override value
-    env = "prod";
-    console.log("Overridden #env control value to = " + env);
-    
-    if (env) {
-        console.log("Using value from sessionStorage = " + env);
-        $('#env').val(env);
-    } else {
-        env = $('#env').val();
-        console.log("Using value from #env control = " + env);
-    }
-
-    // Dynamically add the header parts referencing the correct
-    // Viewer resources from (DEV/STG/PROD) servers
-    var urlSuffixes = {
-        'dev': '-dev',
-        'stg': '-stg',
-        'prod': ''
-    };
-    var urlSuffix = urlSuffixes[env];
-    $('head').append('<script src="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/viewer3D.min.js?v=v2.8"></script>');
-    $('head').append('<link rel="stylesheet" type="text/css" href="https://developer' + urlSuffix + '.api.autodesk.com/viewingservice/v1/viewers/style.min.css?v=v2.8">');
-
-    // Get the tokens
-    var token = getToken();// get3LegToken();
-    var auth = $("#authenticate");
 
     // Delete uploaded file
     $("#deleteFile").click(function(evt) {
         $.ajax({
-            url: '/api/myfiles/' + encodeURIComponent(MyVars.fileName),
+            url: '/dm/files/' + encodeURIComponent(MyVars.fileName),
             type: 'DELETE'
         }).done(function (data) {
             console.log(data);
@@ -54,7 +19,12 @@ $(document).ready(function () {
         });
     });
 
-    // File upload button
+    // Make sure that "change" event is fired
+    // even if same file is selected for upload
+    $("#forgeUploadHidden").click(function (evt) {
+        evt.target.value = "";
+    });
+
     $("#forgeUploadHidden").change(function(evt) {
 
         showProgress("Uploading file... ", "inprogress");
@@ -62,18 +32,20 @@ $(document).ready(function () {
         var fileName = this.value;
         data.append (0, this.files[0]) ;
         $.ajax ({
-            url: '/api/myfiles',
+            url: '/dm/files',
             type: 'POST',
-            headers: { 'x-file-name': fileName },
+            headers: { 'x-file-name': fileName, 'wip-href': MyVars.selectedNode.original.href },
             data: data,
             cache: false,
             processData: false, // Don't process the files
             contentType: false, // Set content type to false as jQuery will tell the server its a query string request
             complete: null
         }).done (function (data) {
-            console.log('Uploaded file "' + data.objectKey + '" with urn = ' + data.objectId);
+            console.log('Uploaded file "' + data.fileName + '" with urn = ' + data.objectId);
 
-            addToFilesTree(data.objectId, data.objectKey);
+            // Refresh file tree
+            //$('#forgeFiles').jstree("refresh");
+
             showProgress("Upload successful", "success");
         }).fail (function (xhr, ajaxOptions, thrownError) {
             alert(fileName + ' upload failed!') ;
@@ -86,38 +58,29 @@ $(document).ready(function () {
         $("#forgeUploadHidden").trigger("click");
     });
 
-    if (token === '') {
-        $("#env").prop('disabled', false);
-        auth.click(authenticate);
-    }
-    else {
-        $("#env").prop('disabled', true);
-        MyVars.token3Leg = token
-        MyVars.token2Leg = get2LegToken();
+    // Get the tokens
+    get3LegToken(function(token) {
+        var auth = $("#authenticate");
 
-        auth.html('You\'re logged in');
-        auth.click(function () {
-            if (confirm("You're logged in and your token is " + token + '\nWould you like to log out?')) {
-                $.ajax({
-                    url: '/api/logoff',
-                    type: 'POST',
-                    success: function (url) {
-                        window.location.reload();
-                    }
-                }).done(function (url) {
-                    window.location.reload();
-                }).fail (function (xhr, ajaxOptions, thrownError) {
-                    alert('logoff error!') ;
-                }) ;
-            }
-        });
+        if (!token) {
+            auth.click(signIn);
+        } else {
+            MyVars.token3Leg = token;
 
-        // Fill the tree with A360 items
-        prepareFilesTree();
+            auth.html('You\'re logged in');
+            auth.click(function () {
+                if (confirm("You're logged in and your token is " + token + '\nWould you like to log out?')) {
+                    logoff();
+                }
+            });
 
-        // Download list of available file formats
-        fillFormats();
-    }
+            // Fill the tree with A360 items
+            prepareFilesTree();
+
+            // Download list of available file formats
+            fillFormats();
+        }
+    });
 
     $('#progressInfo').click(function() {
         MyVars.keepTrying = false;
@@ -135,63 +98,53 @@ function base64encode(str) {
     }
 
     // Remove ending '=' signs
-    var ret2 = ret.replace(/=/g, '');
+    // Use _ instead of /
+    // Use - insteaqd of +
+    // Have a look at this page for info on "Unpadded 'base64url' for "named information" URI's (RFC 6920)"
+    // which is the format being used by the Model Derivative API
+    // https://en.wikipedia.org/wiki/Base64#Variants_summary_table
+    var ret2 = ret.replace(/=/g, '').replace(/[/]/g, '_').replace(/[+]/g, '-');
 
     console.log('base64encode result = ' + ret2);
 
     return ret2;
 }
 
-function getToken() {
-    var token = makeSyncRequest('/api/token');
-    if (token != '') console.log('Get current token: ' + token);
-    return token;
-}
-
-function get2LegToken() {
-    var token = makeSyncRequest('/api/2LegToken');
-    console.log('2 legged token (Developer Authentication): ' + token);
-    return token;
-}
-
-function useToken(token) {
+function signIn() {
     $.ajax({
-        url: '/api/token',
-        type: 'POST',
-        contentType: 'application/json',
-        dataType: 'json',
-        data: JSON.stringify({
-            'token': token
-        })
+        url: '/user/authenticate',
+        success: function (rootUrl) {
+            location.href = rootUrl;
+        }
     });
 }
 
-function makeSyncRequest(url) {
-    var xmlHttp = null;
-    xmlHttp = new XMLHttpRequest();
-    xmlHttp.open("GET", url, false);
-    xmlHttp.send(null);
-    return xmlHttp.responseText;
-}
-
-function authenticate() {
-    var env = $("#env").val();
+function logoff() {
     $.ajax({
-        url: '/api/authenticate',
-        type: 'POST',
-        contentType: 'application/json',
-        dataType: 'json',
-        data: JSON.stringify({
-            'env': env
-        })
-    }).done(function (url) {
-        // iframes are not allowed
-        PopupCenter(url, "Autodesk Login", 800, 400);
-    }).fail(function (err) {
-        console.log('authenticate error\n' + err.statusText);
+        url: '/user/logoff',
+        success: function (oauthUrl) {
+            location.href = oauthUrl;
+        }
     });
 }
 
+function get3LegToken(callback) {
+
+    if (callback) {
+        $.ajax({
+            url: '/user/token',
+            success: function (data) {
+                MyVars.token3Leg = data.token;
+                console.log('Returning new 3 legged token (User Authorization): ' + MyVars.token3Leg);
+                callback(data.token, data.expires_in);
+            }
+        });
+    } else {
+        console.log('Returning saved 3 legged token (User Authorization): ' + MyVars.token3Leg);
+
+        return MyVars.token3Leg;
+    }
+}
 
 // http://stackoverflow.com/questions/4068373/center-a-popup-window-on-screen
 function PopupCenter(url, title, w, h) {
@@ -216,7 +169,7 @@ function downloadDerivative(urn, derUrn, fileName) {
     console.log("downloadDerivative for urn=" + urn + " and derUrn=" + derUrn);
     // fileName = file name you want to use for download
     var url = window.location.protocol + "//" + window.location.host +
-        "/api/download?urn=" + urn +
+        "/md/download?urn=" + urn +
         "&derUrn=" + derUrn +
         "&fileName=" + encodeURIComponent(fileName);
 
@@ -227,7 +180,7 @@ function getThumbnail(urn) {
     console.log("downloadDerivative for urn=" + urn);
     // fileName = file name you want to use for download
     var url = window.location.protocol + "//" + window.location.host +
-        "/api/thumbnail?urn=" + urn;
+        "/dm/thumbnail?urn=" + urn;
 
     window.open(url,'_blank');
 }
@@ -298,7 +251,7 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
     };
 
     $.ajax({
-        url: '/api/export',
+        url: '/md/export',
         type: 'POST',
         contentType: 'application/json',
         dataType: 'json',
@@ -322,7 +275,7 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
         }
     }).fail(function(err) {
         showProgress("Could not start translation", "fail");
-        console.log('/api/export call failed\n' + err.statusText);
+        console.log('/md/export call failed\n' + err.statusText);
     });
 }
 
@@ -330,17 +283,17 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
 function getMetadata(urn, onsuccess) {
     console.log("getMetadata for urn=" + urn);
     $.ajax({
-        url: '/api/metadatas/' + urn,
+        url: '/md/metadatas/' + urn,
         type: 'GET'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
+
         // Get first model guid
         // If it does not exists then something is wrong
         // let's check the manifest
         // If get manifest sees a failed attempt then it will
         // delete the manifest
-        var md0 = json.data.metadata[0];
+        var md0 = data.data.metadata[0];
         if (!md0) {
             getManifest(urn, function () {});
         } else {
@@ -350,22 +303,21 @@ function getMetadata(urn, onsuccess) {
             }
         }
     }).fail(function(err) {
-        console.log('GET /api/metadata call failed\n' + err.statusText);
+        console.log('GET /md/metadata call failed\n' + err.statusText);
     });
 }
 
 function getHierarchy(urn, guid, onsuccess) {
     console.log("getHierarchy for urn=" + urn + " and guid=" + guid);
     $.ajax({
-        url: '/api/hierarchy',
+        url: '/md/hierarchy',
         type: 'GET',
         data: {urn: urn, guid: guid}
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
 
         // If it's 'accepted' then it's not ready yet
-        if (json.result === 'accepted') {
+        if (data.result === 'accepted') {
             // Let's try again
             if (MyVars.keepTrying) {
                 window.setTimeout(function() {
@@ -381,24 +333,24 @@ function getHierarchy(urn, guid, onsuccess) {
 
         // We got what we want
         if (onsuccess !== undefined) {
-            onsuccess(json);
+            onsuccess(data);
         }
     }).fail(function(err) {
-        console.log('GET /api/hierarchy call failed\n' + err.statusText);
+        console.log('GET /md/hierarchy call failed\n' + err.statusText);
     });
 }
 
 function getProperties(urn, guid, onsuccess) {
     console.log("getProperties for urn=" + urn + " and guid=" + guid);
     $.ajax({
-        url: '/api/properties',
+        url: '/md/properties',
         type: 'GET',
         data: {urn: urn, guid: guid}
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
+
         if (onsuccess !== undefined) {
-            onsuccess(json);
+            onsuccess(data);
         }
     }).fail(function(err) {
         console.log('GET /api/properties call failed\n' + err.statusText);
@@ -408,14 +360,14 @@ function getProperties(urn, guid, onsuccess) {
 function getManifest(urn, onsuccess) {
     console.log("getManifest for urn=" + urn);
     $.ajax({
-        url: '/api/manifests/' + urn,
+        url: '/md/manifests/' + urn,
         type: 'GET'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
-        if (json.status !== 'failed') {
-            if (json.progress !== 'complete') {
-                showProgress("Translation progress: " + json.progress, json.status);
+
+        if (data.status !== 'failed') {
+            if (data.progress !== 'complete') {
+                showProgress("Translation progress: " + data.progress, data.status);
 
                 if (MyVars.keepTrying) {
                     // Keep calling until it's done
@@ -427,12 +379,12 @@ function getManifest(urn, onsuccess) {
                     MyVars.keepTrying = true;
                 }
             } else {
-                showProgress("Translation completed", json.status);
-                onsuccess(json);
+                showProgress("Translation completed", data.status);
+                onsuccess(data);
             }
         // if it's a failed translation best thing is to delete it
         } else {
-            showProgress("Translation failed", json.status);
+            showProgress("Translation failed", data.status);
             // Should we do automatic manifest deletion in case of a failed one?
             //delManifest(urn, function () {});
         }
@@ -445,49 +397,17 @@ function getManifest(urn, onsuccess) {
 function delManifest(urn, onsuccess) {
     console.log("delManifest for urn=" + urn);
     $.ajax({
-        url: '/api/manifests/' + urn,
+        url: '/md/manifests/' + urn,
         type: 'DELETE'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
-        if (json.status === 'success') {
+        if (data.status === 'success') {
             if (onsuccess !== undefined) {
-                onsuccess(json);
+                onsuccess(data);
             }
         }
     }).fail(function(err) {
         console.log('DELETE /api/manifest call failed\n' + err.statusText);
-    });
-}
-
-// Ask for an svf translation in order to get all the hierarchical information
-// and properties
-function getDerivatives(urn, fileName, fileExtType, onsuccess) {
-    console.log("getDerivatives for urn=" + urn);
-    var ret = $.ajax({
-        url: '/api/job',
-        type: 'POST',
-        contentType: 'application/json',
-        dataType: 'json',
-        // If fileExtType is provided then pass it on
-        // Derivative services will need to know if it's a
-        // composite/compressed file and that can be told from the
-        // fileExtType value
-        data: (fileExtType ? JSON.stringify({
-            urn: urn,
-            fileName: fileName,
-            fileExtType: fileExtType
-        }) : JSON.stringify({urn: urn}))
-    }).done(function (data) {
-        console.log(data);
-        if (data.result === 'success' // newly submitted data
-            || data.result === 'created') { // already submitted data
-            if (onsuccess !== undefined) {
-                onsuccess();
-            }
-        }
-    }).fail(function(err) {
-        console.log('POST /api/job call failed\n' + err.statusText);
     });
 }
 
@@ -499,27 +419,16 @@ function getDerivatives(urn, fileName, fileExtType, onsuccess) {
 function getFormats(onsuccess) {
     console.log("getFormats");
     $.ajax({
-        url: '/api/formats',
+        url: '/md/formats',
         type: 'GET'
     }).done(function (data) {
         console.log(data);
-        json = JSON.parse(data);
 
         if (onsuccess !== undefined) {
-            onsuccess(json);
+            onsuccess(data);
         }
     }).fail(function(err) {
-        console.log('GET /api/formats call failed\n' + err.statusText);
-    });
-}
-
-// Filter the list so that it contains only the nodes
-// whose parent is not selected
-function getOnlyParents(nodeIds) {
-    var hierarchy = $("#forgeHierarchy");
-
-    $.each(nodeIds, function (index, value) {
-
+        console.log('GET /md/formats call failed\n' + err.statusText);
     });
 }
 
@@ -542,8 +451,7 @@ function fillFormats() {
             var guid = MyVars.selectedGuid;
             var fileName = rootNode.text + "." + format;
             var rootFileName = MyVars.rootFileName;
-            var nodeIds = elem.jstree("get_checked",null,true);
-            //nodeIds = getOnlyParents(nodeIds);
+            var nodeIds = elem.jstree("get_checked", null, true);
 
             // Only OBJ supports subcomponent selection
             // using objectId's
@@ -597,7 +505,6 @@ function fillFormats() {
 
         var deleteManifest = $("#deleteManifest");
         deleteManifest.click(function() {
-            var elem = $("#forgeHierarchy");
             var urn = MyVars.selectedUrn;
 
             cleanupViewer();
@@ -637,7 +544,7 @@ function prepareFilesTree() {
             'themes': {"icons": true},
             'check_callback': true, // make it modifiable
             'data': {
-                "url": '/api/treeNode',
+                "url": '/dm/treeNode',
                 "dataType": "json",
                 "data": function (node) {
                     return {
@@ -667,12 +574,13 @@ function prepareFilesTree() {
             },
             'versions': {
                 'icon': 'glyphicon glyphicon-time'
-            },
-            'files': {
-                'icon': 'glyphicon glyphicon-time'
             }
         },
-        "plugins": ["types", "state"] // let's not use sort: , "sort"]
+        "plugins": ["types", "contextmenu"], // let's not use sort or state: , "state" and "sort"],
+        'contextmenu': {
+            'select_node': false,
+            'items': filesTreeContextMenu
+        }
     }).bind("select_node.jstree", function (evt, data) {
         // Clean up previous instance
         cleanupViewer();
@@ -681,25 +589,12 @@ function prepareFilesTree() {
         $("#forgeFormats").attr('disabled', 'disabled');
         $("#downloadExport").attr('disabled', 'disabled');
 
-        if (data.node.type === 'files') {
-            $("#deleteFile").removeAttr('disabled');
-        } else {
-            $("#deleteFile").attr('disabled', 'disabled');
-        }
-
-        if (data.node.type === 'versions' || data.node.type === 'files') {
+        if (data.node.type === 'versions') {
             $("#deleteManifest").removeAttr('disabled');
+            $("#deleteFile").removeAttr('disabled');
 
             MyVars.keepTrying = true;
             MyVars.selectedNode = data.node;
-
-            // E.g. because of the file upload we might have gotten a 2 legged
-            // token, now we need a 3 legged again... ?
-            if (data.node.type === 'files') {
-                useToken(MyVars.token2Leg);
-            } else {
-                useToken(MyVars.token3Leg);
-            }
 
             // Clear hierarchy tree
             $('#forgeHierarchy').empty().jstree('destroy');
@@ -716,7 +611,12 @@ function prepareFilesTree() {
             MyVars.rootFileName = data.node.original.rootFileName;
             MyVars.fileName = data.node.original.fileName;
             MyVars.fileExtType = data.node.original.fileExtType;
-            MyVars.selectedUrn = base64encode(data.node.original.storage);
+
+            if ($('#wipVsStorage').hasClass('active')) {
+                MyVars.selectedUrn = base64encode(data.node.original.wipid);
+            } else {
+                MyVars.selectedUrn = base64encode(data.node.original.storage);
+            }
 
             // Fill hierarchy tree
             // format, urn, guid, objectIds, rootFileName, fileExtType
@@ -729,6 +629,7 @@ function prepareFilesTree() {
             );
             console.log(
                 "data.node.original.storage = " + data.node.original.storage,
+                "data.node.original.wipid = " + data.node.original.wipid,
                 ", data.node.original.fileName = " + data.node.original.fileName,
                 ", data.node.original.fileExtType = " + data.node.original.fileExtType
             );
@@ -737,9 +638,7 @@ function prepareFilesTree() {
             //initializeViewer(data.node.data);
         } else {
             $("#deleteManifest").attr('disabled', 'disabled');
-
-            // Switch back to 3 legged
-            useToken(MyVars.token3Leg);
+            $("#deleteFile").attr('disabled', 'disabled');
 
             // Just open the children of the node, so that it's easier
             // to find the actual versions
@@ -751,88 +650,90 @@ function prepareFilesTree() {
             $('#forgeProperties').empty().jstree('destroy');
             $('#forgeViewer').html('');
         }
-    }).bind('loaded.jstree', function(e, data) {
-        // Also read the files we have on the server
-        getMyFiles();
     });
 }
 
-function getMyFiles () {
-    console.log("getMyFiles calling /api/myfiles");
-    var ret = $.ajax({
-        url: '/api/myfiles',
-        type: 'GET'
+function downloadAttachment(href, attachmentVersionId) {
+    console.log("downloadAttachment for href=" + href);
+    // fileName = file name you want to use for download
+    var url = window.location.protocol + "//" + window.location.host +
+        "/dm/attachments/" + encodeURIComponent(attachmentVersionId) + "?href=" + encodeURIComponent(href);
+
+    window.open(url,'_blank');
+}
+
+function deleteAttachment(href, attachmentVersionId) {
+    alert("Functionality not available yet");
+    return;
+
+    console.log("deleteAttachment for href=" + href);
+    $.ajax({
+        url: '/dm/attachments/' + encodeURIComponent(attachmentVersionId),
+        headers: { 'wip-href': href },
+        type: 'DELETE'
     }).done(function (data) {
         console.log(data);
-        for (itemId in data) {
-            var item = data[itemId];
-            addToFilesTree(item.objectId, item.objectKey);
+        if (data.status === 'success') {
+            if (onsuccess !== undefined) {
+                onsuccess(data);
+            }
         }
-
-    }).fail(function() {
-        console.log('GET /api/myfiles call failed');
+    }).fail(function(err) {
+        console.log('DELETE /api/manifest call failed\n' + err.statusText);
     });
 }
 
-function addToFilesTree(objectId, fileName) {
-    // we need to set
-    // fileType = obj, ipt, etc
-    // fileExtType = versions:autodesk.a360:CompositeDesign or not
-    // fileName = e.g. myfile.ipt
-    // storage = the objectId of the file
-    var nameParts = fileName.split('.');
-    var oldExtension = nameParts[nameParts.length - 1];
-    var extension = oldExtension;
+function filesTreeContextMenu(node, callback) {
+    if (node.type === 'versions') {
+        $.ajax({
+            url: '/dm/attachments',
+            data: {href: node.original.href},
+            type: 'GET',
+            success: function (data) {
+                var menuItems = null;
+                data.data.forEach(function (item) {
+                    if (item.meta.extension.type === "auxiliary:autodesk.core:Attachment") {
+                        var menuItem = {
+                            "label": item.displayName,
+                            "action": function (obj) {
+                                alert(obj.item.label + " with versionId = " + obj.item.versionId);
+                            },
+                            "versionId": item.id,
+                            "submenu" : {
+                                "open": {
+                                    "label": "Open",
+                                    "action": function (obj) {
+                                        downloadAttachment(obj.item.href, obj.item.versionId);
+                                    },
+                                    "versionId": item.id,
+                                    "href": node.original.href
+                                },
+                                "delete": {
+                                    "label": "Delete",
+                                    "action": function (obj) {
+                                        deleteAttachment(obj.item.href, obj.item.versionId);
+                                    },
+                                    "versionId": item.id,
+                                    "href": node.original.href
+                                }
+                            }
+                        };
 
-    // If it's a zip then we assume that the root file name
-    // comes before the zip extension,
-    // e.g. "scissors.iam.zip" >> "scissors.iam" is the root
+                        menuItems = menuItems || {};
+                        menuItems[item.id] = menuItem;
+                    }
+                })
 
-    var myFileNodeId = $('#forgeFiles').jstree('get_node', "forgeFiles_myFiles");
-    if (!myFileNodeId) {
-        myFileNodeId = $('#forgeFiles').jstree('create_node', "#",
-            {
-                id: "forgeFiles_myFiles",
-                text: "My Files",
-                type: "hubs",
-            }, "last"
-        );
+                if (!menuItems) {
+                    callback({noItem: {label: "No attachments", action: function () {}}});
+                } else {
+                    callback(menuItems);
+                }
+            }
+        });
     }
 
-    var myFileNode = $('#forgeFiles').jstree().get_node(myFileNodeId);
-    for (var childId in myFileNode.children) {
-        var childNodeId = myFileNode.children[childId];
-        var childNode = $('#forgeFiles').jstree().get_node(childNodeId);
-
-        // If this file is already listed then we've overwritten it on
-        // the server and so no need to add it to the tree
-        if (childNode.text === fileName) {
-            return;
-        }
-    }
-
-    var rootFileName = fileName;
-    if (extension === 'zip') {
-        rootFileName = fileName.slice(0, -4);
-        // If it's a zip and it has another extension
-        // then cut back to that
-        if (nameParts.length > 2) {
-            extension = nameParts[nameParts.length - 2];
-        }
-    }
-
-    var newNode = $('#forgeFiles').jstree('create_node', "forgeFiles_myFiles",
-        {
-            text: fileName,
-            type: "files",
-            fileType: extension,
-            fileExtType: (oldExtension === 'zip' ?
-                'versions:autodesk.a360:CompositeDesign' : 'versions:autodesk.a360:File'),
-            fileName: fileName,
-            rootFileName: rootFileName,
-            storage: objectId
-        }, "last"
-    );
+    return;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -850,27 +751,25 @@ function showHierarchy(urn, guid, objectIds, rootFileName, fileExtType) {
     // Get svf export in order to get hierarchy and properties
     // for the model
     var format = 'svf';
-    askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType, function () {
-        getManifest(urn, function(manifest) {
-            getMetadata(urn, function (guid) {
-                showProgress("Retrieving hierarchy...", "inprogress");
+    askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType, function (manifest) {
+        getMetadata(urn, function (guid) {
+            showProgress("Retrieving hierarchy...", "inprogress");
 
-                getHierarchy(urn, guid, function (data) {
-                    showProgress("Retrieved hierarchy", "success");
+            getHierarchy(urn, guid, function (data) {
+                showProgress("Retrieved hierarchy", "success");
 
-                    prepareHierarchyTree(urn, guid, data.data);
+                for (var derId in manifest.derivatives) {
+                    var der = manifest.derivatives[derId];
+                    // We just have to make sure there is an svf
+                    // translation, but the viewer will find it
+                    // from the urn
+                    if (der.outputType === 'svf') {
 
-                    for (var derId in manifest.derivatives) {
-                        var der = manifest.derivatives[derId];
-                        // We just have to make sure there is an svf
-                        // translation, but the viewer will find it
-                        // from the urn
-                        if (der.outputType === 'svf') {
-
-                            initializeViewer(urn);
-                        }
+                        initializeViewer(urn);
                     }
-                });
+                }
+
+                prepareHierarchyTree(urn, guid, data.data);
             });
         });
     });
@@ -932,7 +831,7 @@ function prepareHierarchyTree(urn, guid, json) {
                 'icon': 'glyphicon glyphicon-save-file'
             }
         },
-        "plugins": ["types", "state", "sort", "checkbox", "ui", "themes"]
+        "plugins": ["types", "sort", "checkbox", "ui", "themes"]
     }).bind("select_node.jstree", function (evt, data) {
         if (data.node.type === 'object') {
             var urn = MyVars.selectedUrn;
@@ -944,9 +843,48 @@ function prepareHierarchyTree(urn, guid, json) {
 
             fetchProperties(urn, guid, function (props) {
                 preparePropertyTree(urn, guid, objectId, props);
+                selectInViewer([objectId]);
             });
         }
+    }).bind("check_node.jstree uncheck_node.jstree", function (evt, data) {
+        // To avoid recursion we are checking if the changes are
+        // caused by a viewer selection which is calling
+        // selectInHierarchyTree()
+        if (!MyVars.selectingInHierarchyTree) {
+            var elem = $('#forgeHierarchy');
+            var nodeIds = elem.jstree("get_checked", null, true);
+
+            // Convert from strings to numbers
+            var objectIds = [];
+            $.each(nodeIds, function (index, value) {
+                objectIds.push(parseInt(value, 10));
+            });
+
+            selectInViewer(objectIds);
+        }
     });
+}
+
+function selectInHierarchyTree(objectIds) {
+    MyVars.selectingInHierarchyTree = true;
+
+    var tree = $("#forgeHierarchy").jstree();
+
+    // First remove all the selection
+    tree.uncheck_all();
+
+    // Now select the newly selected items
+    for (var key in objectIds) {
+        var id = objectIds[key];
+
+        // Select the node
+        tree.check_node(id);
+
+        // Make sure that it is visible for the user
+        tree._open_to(id);
+    }
+
+    MyVars.selectingInHierarchyTree = false;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -1026,7 +964,7 @@ function preparePropertyTree(urn, guid, objectId, props) {
                 'icon': 'glyphicon glyphicon-folder-open'
             }
         },
-        "plugins": ["types", "state", "sort"]
+        "plugins": ["types", "sort"]
     }).bind("activate_node.jstree", function (evt, data) {
        //
     });
@@ -1040,40 +978,46 @@ function preparePropertyTree(urn, guid, objectId, props) {
 
 function cleanupViewer() {
     // Clean up previous instance
-    if (MyVars.viewer) {
-        MyVars.viewer.finish();
-        $('#forgeViewer').html('');
-        MyVars.viewer = null;
+    if (MyVars.viewer && MyVars.viewer.model) {
+        console.log("Unloading current model from Autodesk Viewer");
+
+        MyVars.viewer.impl.unloadModel(MyVars.viewer.model);
+        MyVars.viewer.impl.sceneUpdated(true);
     }
 }
 
 function initializeViewer(urn) {
     cleanupViewer();
 
-    // Get environment
-    var env = $("#env").val();
+    console.log("Launching Autodesk Viewer for: " + urn);
 
-    console.log("Launching Autodesk Viewer for: " + urn + " in environment: " + env);
-    var viewerEnvironments = {
-        dev: 'AutodeskDevelopment',
-        stg: 'AutodeskStaging',
-        prod: 'AutodeskProduction'
-    };
     var options = {
         'document': 'urn:' + urn,
-        'env': viewerEnvironments[env],
-        'getAccessToken': getToken
+        'env': 'AutodeskProduction',
+        'getAccessToken': get3LegToken // this works fine, but if I pass get3LegToken it only works the first time
     };
-    //$('#viewer').css("background-image", "url(/api/getThumbnail?urn=" + urn + ")");
-    var viewerElement = document.getElementById('forgeViewer');
-    MyVars.viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerElement, {});
-    Autodesk.Viewing.Initializer(
-        options,
-        function () {
-            MyVars.viewer.initialize();
-            loadDocument(MyVars.viewer, options.document);
-        }
-    );
+
+    if (MyVars.viewer) {
+        loadDocument(MyVars.viewer, options.document);
+    } else {
+        var viewerElement = document.getElementById('forgeViewer');
+        MyVars.viewer = new Autodesk.Viewing.Private.GuiViewer3D(viewerElement, {});
+        Autodesk.Viewing.Initializer(
+            options,
+            function () {
+                MyVars.viewer.start(); // this would be needed if we also want to load extensions
+                loadDocument(MyVars.viewer, options.document);
+            }
+        );
+    }
+}
+
+function addSelectionListener(viewer) {
+    viewer.addEventListener(
+        Autodesk.Viewing.SELECTION_CHANGED_EVENT,
+        function (event) {
+            selectInHierarchyTree(event.dbIdArray);
+        });
 }
 
 function loadDocument(viewer, documentId) {
@@ -1095,14 +1039,55 @@ function loadDocument(viewer, documentId) {
                     'role': '2d'
                 }, true);
 
-            if (geometryItems.length > 0)
-                viewer.load(doc.getViewablePath(geometryItems[0]), null, null, null, doc.acmSessionId /*session for DM*/);
+            if (geometryItems.length > 0) {
+                var path = doc.getViewablePath(geometryItems[0]);
+                //viewer.load(doc.getViewablePath(geometryItems[0]), null, null, null, doc.acmSessionId /*session for DM*/);
+                var options = {};
+                viewer.loadModel(path, options);
+            }
+
+            addSelectionListener(viewer);
         },
         // onError
         function (errorMsg) {
-            showThumbnail(documentId.substr(4, documentId.length - 1));
+            //showThumbnail(documentId.substr(4, documentId.length - 1));
         }
+        /*
+        ,
+        // temporary workaround
+        {
+            'oauth2AccessToken': get3LegToken(),
+            'x-ads-acm-namespace': 'WIPDM',
+            'x-ads-acm-check-groups': 'true',
+        }
+        */
     )
+}
+
+function getAllDbIdsFromRoot(root) {
+    var allDbIds = [];
+    if (!root) {
+        return allDbIds;
+    }
+    var queue = [];
+    queue.push(root); //push the root into queue
+    while (queue.length > 0) {
+        var node = queue.shift(); // the current node
+        allDbIds.push(node.dbId);
+        if (node.children) {
+            // put all the children in the queue too
+            for (var i = 0; i < node.children.length; i++) {
+                queue.push(node.children[i]);
+            }
+        }
+    };
+    return allDbIds;
+};
+
+function selectInViewer(objectIds) {
+    if (MyVars.viewer) {
+        MyVars.viewer.select(objectIds);
+    }
 }
 
 function showThumbnail(urn) {

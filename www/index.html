@@ -13,16 +13,21 @@
     <script src="/js/jstree.js"></script>
     <script src="/js/bootstrap.min.js"></script>
 
+    <!-- for the viewer -->
     <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/three.min.js"></script>
-
-    <!--<script src="https://developer-stg.api.autodesk.com/viewingservice/v1/viewers/viewer3D.js"></script>-->
+    <!-- Last working version was 2.8
+      <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.js?v=v2.8"></script>
+      <link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.min.css?v=v2.8"/>
+    ?v=v2.10 -->
+    <script src="https://developer.api.autodesk.com/viewingservice/v1/viewers/viewer3D.js?v=v2.10"></script>
+    <link rel="stylesheet" href="https://developer.api.autodesk.com/viewingservice/v1/viewers/style.min.css?v=v2.10"/>
 
     <link rel="stylesheet" href="/css/index.css"/>
 </head>
 <body>
 <div class="container">
     <div class="jumbotron">
-        <h2>Model Derivative API - Basic Node.js Sample</h2>
+        <h3>Model Derivative API - Basic Node.js Sample</h3>
         <h4>Show the entire list of
             <span class="glyphicon glyphicon-inbox"></span> Hubs,
             <span class="glyphicon glyphicon-list-alt"></span> Projects,
@@ -33,30 +38,30 @@
         <h4>Select an item version to show a file using <a href="https://developer.autodesk.com/api/viewerapi/">
                 Autodesk Viewer</a>
         </h4>
-        <div class="row forgeLogIn" style="  width:100%">
-            <div class="col-sm-3">
+        <div class="row">
+            <div class="col-sm-3" style="height:40px">
 
                 <a href="#" id="authenticate" class="btn btn-warning btn-block">
                     <span class="glyphicon glyphicon-user"></span>
                     Log In
                 </a>
             </div>
-            <div class="col-sm-3" style="height:40px;">
-                <select value="prod" id="env" class="input-small form-control" style="width:150px; display: none">
-                    <option value="dev">Development</option>
-                    <option value="stg" selected>Staging</option>
-                    <option value="prod">Production</option>
-                </select>
+            <div class="col-sm-3" style="height:40px">
+                <div id="wipVsStorage" class="btn btn-primary" data-toggle="button" aria-pressed="false" autocomplete="off" style="font-size: 10pt ">
+                    <span id="wipVsStorageText">Use WIP (instead of Storage)</span>
+                </div>
             </div>
-
         </div>
         <div class="row">
-            <div class="col-sm-9" style="height:40px">
+            <div class="col-sm-3" style="height:40px">
                 <div id="progressInfo" class="btn btn-info" style="font-size: 10pt ">
                     <span id="progressInfoText">Progress info</span>
                     <span id="progressInfoIcon"></span>
                 </div>
             </div>
+        </div>
+        <div class="row">
+
         </div>
         <div class="row" style="background: white">
             <div class="col-sm-3 forgeTreeContainer">
