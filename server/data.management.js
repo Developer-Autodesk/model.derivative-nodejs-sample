@@ -32,11 +32,190 @@ function setToken(forge, req, res) {
     return forge;
 }
 
+function getFolderId(projectId, versionId) {
+    return new Promise(function (_resolve, _reject) {
+        // Figure out the itemId of the file we want to attach the new file to
+        var versions = new forgeDM.VersionsApi();
+        versions.getVersion(projectId, versionId)
+            .then(function (versionData) {
+                var itemId = versionData.data.relationships.item.data.id;
+
+                // Figure out the folderId of the file we want to attach the new file to
+                var items = new forgeDM.ItemsApi();
+                items.getItem(projectId, itemId)
+                    .then(function (itemData) {
+                        var folderId = itemData.data.relationships.parent.data.id;
+
+                        _resolve(folderId);
+                    })
+                    .catch(function (error) {
+                        console.log(error);
+                        _reject(error);
+                    });
+            })
+            .catch(function (error) {
+                console.log(error);
+                _reject(error);
+            });
+    });
+}
+
+function uploadFile(projectId, folderId, fileName, fileSize, fileTempPath) {
+    return new Promise(function (_resolve, _reject) {
+        // Ask for storage for the new file we want to upload
+        var projects = new forgeDM.ProjectsApi();
+        projects.postStorage(projectId, JSON.stringify(storageSpecData(fileName, folderId)))
+            .then(function (storageData) {
+                var objectId = storageData.data.id;
+                var bucketKeyObjectName = getBucketKeyObjectName(objectId);
+
+                fs.readFile(fileTempPath, function (err, fileData) {
+                    // Upload the new file
+                    var objects = new forgeOSS.ObjectsApi();
+                    objects.uploadObject(bucketKeyObjectName.bucketKey, bucketKeyObjectName.objectName, fileSize, fileData)
+                        .then(function (objectData) {
+                            console.log('uploadObject: succeeded');
+                            _resolve(objectData.objectId);
+                        })
+                        .catch(function (error) {
+                            console.log('uploadObject: failed');
+                            _reject(error);
+                        });
+                });
+            })
+            .catch(function(error) {
+                _reject(error);
+            });
+    });
+}
+
+function createNewItemVersion(projectId, folderId, fileName, objectId) {
+    return new Promise(function (_resolve, _reject) {
+
+        var folders = new forgeDM.FoldersApi();
+
+        folders.getFolderContents(projectId, folderId)
+            .then(function (folderData) {
+                var item = null;
+                for (var key in folderData.data) {
+                    item = folderData.data[key];
+                    if (item.attributes.displayName === fileName) {
+                        break;
+                    } else {
+                        item = null;
+                    }
+                }
+
+                var projects = new forgeDM.ProjectsApi();
+
+                if (item) {
+                    // We found it so we should create a new version
+
+                    projects.postVersion(projectId, JSON.stringify(versionSpecData(fileName, item.id, objectId)))
+                        .then(function (versionData) {
+                            _resolve(versionData.data.id);
+                        })
+                        .catch(function (error) {
+                            console.log('postItem: failed');
+
+                            _reject(error);
+                        });
+                } else {
+                    // We did not find it so we should create it
+
+                    projects.postItem(projectId, JSON.stringify(itemSpecData(fileName, folderId, objectId)))
+                        .then(function (itemData) {
+                            // Get the versionId out of the reply
+                            _resolve(itemData.included[0].id);
+                        })
+                        .catch(function (error) {
+                            console.log('postItem: failed');
+
+                            _reject(error);
+                        });
+                }
+            })
+            .catch(function (error) {
+                console.log('getFolderContents: failed');
+                _reject(error);
+            });
+    });
+}
+
+function attachVersionToAnotherVersion(projectId, versionId, attachmentVersionId) {
+    return new Promise(function (_resolve, _reject) {
+        // Ask for storage for the new file we want to upload
+        var versions = new forgeDM.VersionsApi();
+        versions.postVersionRelationshipsRef(projectId, versionId, JSON.stringify(attachmentSpecData(attachmentVersionId)))
+            .then(function () {
+                _resolve();
+            })
+            .catch(function(error) {
+                console.log('postVersionRelationshipsRef: failed');
+                _reject(error);
+            });
+    });
+}
+
+router.get('/attachments', function (req, res) {
+    var href = decodeURIComponent(req.query.href);
+    var params = href.split('/');
+    var projectId = params[params.length - 3];
+    var versionId = params[params.length - 1];
+
+    var versions = new forgeDM.VersionsApi();
+    versions.getVersionRelationshipsRefs(projectId, versionId)
+        .then(function (relationshipsData) {
+            var versionRequests = [];
+            for (var key in relationshipsData.data) {
+                var item = relationshipsData.data[key];
+                if (item.meta.extension.type === "auxiliary:autodesk.core:Attachment") {
+                    (function (relationshipItem) {
+                        var versionRequest = new Promise(function (_resolve, _reject) {
+                            versions.getVersion(projectId, relationshipItem.id)
+                                .then(function (versionData) {
+                                    relationshipItem.displayName =
+                                        versionData.data.attributes.displayName +
+                                        " (v" + versionData.data.attributes.versionNumber + ")";
+                                    _resolve();
+                                })
+                                .catch(function (error) {
+                                    console.log('getVersion: failed');
+                                    _reject(error);
+                                });
+                        });
+                        versionRequests.push(versionRequest);
+                    })(item);
+                }
+            };
+
+            Promise.all(versionRequests)
+                .then(function () {
+                    res.json(relationshipsData);
+                })
+                .catch(function (error) {
+                    console.log('Parallel getVersion: failed');
+                    res.status(error.statusCode).end('Parallel getVersion: failed');
+                })
+        })
+        .catch(function(error) {
+            console.log('getVersionRelationshipsRef: failed');
+            res.status(error.statusCode).end('getVersionRelationshipsRef: failed');
+        });
+});
+
 router.post('/files', jsonParser, function (req, res) {
+    // Uploading a file to A360
+    // 1) Check if the file already exists
+    // 2) If not then create a new item and upload the file in it
+    // 3) If yes, then create a new version
+
     var fileName = '';
     var form = new formidable.IncomingForm();
 
-    if (!setToken(forgeDM, req, res))
+    // The two helper we are using are
+    // forgeDM & forgeOSS
+    if (!setToken(forgeDM, req, res) || !setToken(forgeOSS, req, res))
         return;
 
     // Find out the project where we have to upload the file
@@ -69,56 +248,37 @@ router.post('/files', jsonParser, function (req, res) {
             console.log('-> file received');
 
             // Create file on A360
-            var versions = new forgeDM.VersionsApi();
-            versions.getVersion(projectId, versionId)
-                .then(function (versionData) {
-                    var itemId = versionData.data.relationships.item.data.id;
 
-                    var items = new forgeDM.ItemsApi();
-                    items.getItem(projectId, itemId)
-                        .then(function (itemData) {
-                            var folderId = itemData.data.relationships.parent.data.id;
-
-                            var projects = new forgeDM.ProjectsApi();
-                            projects.postStorage(projectId, JSON.stringify(storageSpecData(uploadedFile.name, folderId)))
-                                .then(function (storage) {
-                                    var objectId = storage.data.id;
-                                    var bucketKeyObjectName = getBucketKeyObjectName(objectId);
-
-                                    setToken(forgeOSS, req, res);
-
-                                    fs.readFile(uploadedFile.path, function (err, fileData ) {
-                                        var objects = new forgeOSS.ObjectsApi();
-                                        objects.uploadObject(bucketKeyObjectName.bucketKey, bucketKeyObjectName.objectName, uploadedFile.size, fileData)
-                                            .then(function (data) {
-                                                console.log('uploadObject succeeded');
-                                                projects.postItem(projectId, JSON.stringify(versionSpecData(uploadedFile.name, folderId, objectId)))
-                                                    .then(function (version) {
-                                                        res.status(200).json({file: version.data.attributes.displayName});
-                                                    })
-                                                    .catch(function (error) {
-                                                        console.log('postItem failed');
-                                                        res.status(500).end('postItem failed');
-                                                    });
-                                            })
-                                            .catch(function (error) {
-                                                console.log('uploadObject failed');
-                                                res.status(500).end('uploadObject failed');
-                                            });
-                                    });
+            // Get the folder where the selected item is
+            getFolderId(projectId, versionId)
+                .then(function (folderId) {
+                    // projectId, folderId, fileName, fileSize, fileTempPath
+                    uploadFile(projectId, folderId, uploadedFile.name, uploadedFile.size, uploadedFile.path)
+                        .then(function (objectId) {
+                            createNewItemVersion(projectId, folderId, uploadedFile.name, objectId)
+                                .then(function (attachmentVersionId) {
+                                    attachVersionToAnotherVersion(projectId, versionId, attachmentVersionId)
+                                        .then(function () {
+                                            res.status(200).json({fileName: uploadedFile.name, objectId: objectId});
+                                        })
+                                        .catch(function (error) {
+                                            console.log('attachVersionToAnotherVersion: failed');
+                                            res.status(error.statusCode).end('attachVersionToAnotherVersion: failed');
+                                        });
                                 })
-                                .catch(function(error) {
-                                    res.status(500).end('postStorage failed');
+                                .catch(function (error) {
+                                    console.log('createNewItemVersionInFolder: failed');
+                                    res.status(error.statusCode).end('createNewItemVersionInFolder: failed');
                                 });
-
                         })
-                        .catch (function (error) {
-                            res.status(500).end('getItem failed');
+                        .catch(function (error) {
+                            console.log('uploadFile: failed');
+                            res.status(error.statusCode).end('uploadFile: failed');
                         });
                 })
                 .catch(function (error) {
-                    console.log(error);
-                    res.status(500).end('getVersion failed');
+                    console.log('getFolderId: failed');
+                    res.status(error.statusCode).end('getFolderId: failed');
                 });
         });
 
@@ -135,17 +295,16 @@ function getBucketKeyObjectName(objectId) {
     // and get the BucketKey
     var bucketKeyValue = bucketKeyParams[bucketKeyParams.length - 1];
 
-    var ret =
-    {
+    var ret = {
         bucketKey: bucketKeyValue,
         objectName: objectNameValue
     };
+
     return ret;
 }
 
 function storageSpecData(fileName, folderId) {
-    var storageSpecs =
-    {
+    var storageSpecs = {
         data: {
             type: 'objects',
             attributes: {
@@ -161,60 +320,111 @@ function storageSpecData(fileName, folderId) {
             }
         }
     };
+
     return storageSpecs;
 }
 
-function versionSpecData(filename, folderId, objectId) {
-    var versionSpec =
-    {
+function itemSpecData(fileName, folderId, objectId) {
+    var itemSpec = {
         jsonapi: {
             version: "1.0"
         },
-        data: [
-            {
-                type: "items",
-                attributes: {
-                    name: filename,
-                    extension: {
-                        type: "items:autodesk.core:File",
-                        version: "1.0"
+        data: [{
+            type: "items",
+            attributes: {
+                name: fileName,
+                extension: {
+                    type: "items:autodesk.core:File",
+                    version: "1.0"
+                }
+            },
+            relationships: {
+                tip: {
+                    data: {
+                        type: "versions",
+                        id: "1"
                     }
                 },
-                relationships: {
-                    tip: {
-                        data: {
-                            type: "versions",
-                            id: "1"
-                        }
-                    },
-                    parent: {
-                        data: {
-                            type: "folders",
-                            id: folderId
-                        }
+                parent: {
+                    data: {
+                        type: "folders",
+                        id: folderId
                     }
                 }
             }
-        ],
-        included: [
-            {
-                type: "versions",
-                id: "1",
-                attributes: {
-                    name: filename
-                },
-                relationships: {
-                    storage: {
-                        data: {
-                            type: "objects",
-                            id: objectId
-                        }
+        }],
+        included: [{
+            type: "versions",
+            id: "1",
+            attributes: {
+                name: fileName
+            },
+            relationships: {
+                storage: {
+                    data: {
+                        type: "objects",
+                        id: objectId
                     }
                 }
             }
-        ]
+        }]
     };
+
+    return itemSpec;
+}
+
+function versionSpecData(fileName, itemId, objectId) {
+    var versionSpec = {
+        "jsonapi": {
+            "version": "1.0"
+        },
+        "data": {
+            "type": "versions",
+            "attributes": {
+                "name": fileName,
+                "extension": {
+                    "type": "versions:autodesk.core:File",
+                    "version": "1.0"
+                }
+            },
+            "relationships": {
+                "item": {
+                    "data": {
+                        "type": "items",
+                        "id": itemId
+                    }
+                },
+                "storage": {
+                    "data": {
+                        "type": "objects",
+                        "id": objectId
+                    }
+                }
+            }
+        }
+    }
+
     return versionSpec;
+}
+
+function attachmentSpecData(versionId) {
+    var attachmentSpec = {
+        "jsonapi": {
+            "version": "1.0"
+        },
+        "data": {
+            "type": "versions",
+            "id": versionId,
+            "meta": {
+                "extension": {
+                    "type": "auxiliary:autodesk.core:Attachment",
+                    "version": "1.0"
+                }
+            }
+        }
+    }
+
+    return attachmentSpec;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -323,12 +533,17 @@ function makeTree(items, canHaveChildren, data) {
             }
         }
 
+        var versionText = "";
+        if (item.type === "versions") {
+            versionText = " (v" + item.attributes.versionNumber + ")";
+        }
+
         var treeItem = {
             href: item.links.self.href,
             wipid: item.id,
             storage: (item.relationships != null && item.relationships.storage != null ? item.relationships.storage.data.id : null),
             data: (item.relationships != null && item.relationships.derivatives != null ? item.relationships.derivatives.data.id : null),
-            text: (item.attributes.displayName == null ? item.attributes.name : item.attributes.displayName),
+            text: (item.attributes.displayName == null ? item.attributes.name : item.attributes.displayName) + versionText,
             fileName: (item.attributes ? item.attributes.name : null),
             rootFileName: (item.attributes ? item.attributes.name : null),
             fileExtType: (item.attributes && item.attributes.extension ? item.attributes.extension.type : null),

@@ -19,7 +19,12 @@ $(document).ready(function () {
         });
     });
 
-    // File upload button
+    // Make sure that "change" event is fired
+    // even if same file is selected for upload
+    $("#forgeUploadHidden").click(function (evt) {
+        evt.target.value = "";
+    });
+
     $("#forgeUploadHidden").change(function(evt) {
 
         showProgress("Uploading file... ", "inprogress");
@@ -36,9 +41,11 @@ $(document).ready(function () {
             contentType: false, // Set content type to false as jQuery will tell the server its a query string request
             complete: null
         }).done (function (data) {
-            console.log('Uploaded file "' + data.objectKey + '" with urn = ' + data.objectId);
+            console.log('Uploaded file "' + data.fileName + '" with urn = ' + data.objectId);
 
-            addToFilesTree(data.objectId, data.objectKey);
+            // Refresh file tree
+            //$('#forgeFiles').jstree("refresh");
+
             showProgress("Upload successful", "success");
         }).fail (function (xhr, ajaxOptions, thrownError) {
             alert(fileName + ' upload failed!') ;
@@ -126,12 +133,11 @@ function get3LegToken(callback) {
     if (callback) {
         $.ajax({
             url: '/user/token',
-            success: function (res) {
-                MyVars.token3Leg = res.token;
+            success: function (data) {
+                MyVars.token3Leg = data.token;
                 console.log('Returning new 3 legged token (User Authorization): ' + MyVars.token3Leg);
-                callback(res.token, res.expires_in);
-            },
-            async: true
+                callback(data.token, data.expires_in);
+            }
         });
     } else {
         console.log('Returning saved 3 legged token (User Authorization): ' + MyVars.token3Leg);
@@ -570,7 +576,11 @@ function prepareFilesTree() {
                 'icon': 'glyphicon glyphicon-time'
             }
         },
-        "plugins": ["types"] // let's not use sort: , "state" and "sort"]
+        "plugins": ["types", "contextmenu"], // let's not use sort or state: , "state" and "sort"],
+        'contextmenu': {
+            'select_node': false,
+            'items': filesTreeContextMenu
+        }
     }).bind("select_node.jstree", function (evt, data) {
         // Clean up previous instance
         cleanupViewer();
@@ -640,7 +650,38 @@ function prepareFilesTree() {
             $('#forgeProperties').empty().jstree('destroy');
             $('#forgeViewer').html('');
         }
+    }).bind("contextmenu.jstree", function (evt, data) {
+        var str = ""
     });
+}
+
+function filesTreeContextMenu(node, callback) {
+    if (node.type === 'versions') {
+        $.ajax({
+            url: '/dm/attachments',
+            data: {href: node.original.href},
+            type: 'GET',
+            success: function (data) {
+                var menuItems = {};
+                data.data.forEach(function (item) {
+                    if (item.meta.extension.type === "auxiliary:autodesk.core:Attachment") {
+                        var menuItem = {
+                            "label": item.displayName,
+                            "action": function (obj) {
+                                alert(obj.item.label + " with versionId = " + obj.item.versionId);
+                            },
+                            "versionId": item.id
+                        };
+                        menuItems[item.id] = menuItem;
+                    }
+                })
+
+                callback(menuItems);
+            }
+        });
+    }
+
+    return;
 }
 
 /////////////////////////////////////////////////////////////////
