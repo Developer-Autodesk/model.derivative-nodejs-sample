@@ -1003,10 +1003,20 @@ function addSelectionListener(viewer) {
         Autodesk.Viewing.SELECTION_CHANGED_EVENT,
         function (event) {
             selectInHierarchyTree(event.dbIdArray);
+
+            var dbId = event.dbIdArray[0];
+            if (dbId) {
+                viewer.getProperties(dbId, function (props) {
+                   console.log(props.externalId);
+                });
+            }
         });
 }
 
 function loadDocument(viewer, documentId) {
+    Autodesk.Viewing.HTTP_REQUEST_HEADERS['x-ads-acm-namespace'] = 'WIPDM';
+    Autodesk.Viewing.HTTP_REQUEST_HEADERS['x-ads-acm-check-groups'] = 'true';
+
     Autodesk.Viewing.Document.load(
         documentId,
         // onLoad
@@ -1036,37 +1046,8 @@ function loadDocument(viewer, documentId) {
         function (errorMsg) {
             //showThumbnail(documentId.substr(4, documentId.length - 1));
         }
-        /*
-        ,
-        // temporary workaround
-        {
-            'oauth2AccessToken': get3LegToken(),
-            'x-ads-acm-namespace': 'WIPDM',
-            'x-ads-acm-check-groups': 'true',
-        }
-        */
     )
 }
-
-function getAllDbIdsFromRoot(root) {
-    var allDbIds = [];
-    if (!root) {
-        return allDbIds;
-    }
-    var queue = [];
-    queue.push(root); //push the root into queue
-    while (queue.length > 0) {
-        var node = queue.shift(); // the current node
-        allDbIds.push(node.dbId);
-        if (node.children) {
-            // put all the children in the queue too
-            for (var i = 0; i < node.children.length; i++) {
-                queue.push(node.children[i]);
-            }
-        }
-    };
-    return allDbIds;
-};
 
 function selectInViewer(objectIds) {
     if (MyVars.viewer) {

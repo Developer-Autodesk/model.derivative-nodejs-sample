@@ -1,84 +1,95 @@
 # Workflow Sample for Model Derivative Service APIs
 
-[![Node.js](https://img.shields.io/badge/Node.js-6.2.0-blue.svg)](https://nodejs.org/)
-[![npm](https://img.shields.io/badge/npm-3.8.9-blue.svg)](https://www.npmjs.com/)
-[![Viewer](https://img.shields.io/badge/Viewer-v2.8-green.svg)](http://developer-autodesk.github.io/)
+[![Node.js](https://img.shields.io/badge/Node.js-4.4.3-blue.svg)](https://nodejs.org/)
+[![npm](https://img.shields.io/badge/npm-2.15.1-blue.svg)](https://www.npmjs.com/)
 ![Platforms](https://img.shields.io/badge/platform-windows%20%7C%20osx%20%7C%20linux-lightgray.svg)
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://opensource.org/licenses/MIT)
 
-## Description
+[![OAuth2](https://img.shields.io/badge/OAuth2-v1-green.svg)](http://developer.autodesk.com/)
+[![OSS](https://img.shields.io/badge/OSS-v2-green.svg)](http://developer.autodesk.com/)
+[![Model-Derivative](https://img.shields.io/badge/Model%20Derivative-v2-green.svg)](http://developer.autodesk.com/)
 
-This sample shows how you can use the **Model Derivative API** and what you can do with it. It was designed for initial testing on multiple enviroments (DEV, STG and PROD). In most cases, you'll use PRODUCTION keys from [Forge Platform](https://developer.autodesk.com).
+# Description
 
-Also use [Autodesk Viewer](https://developer.autodesk.com/en/docs/viewer/v2/overview/) for showing models. Set of consumer key and secret are required (at least one environment), please visit Forge for more information.
+This sample shows how you can use the **Model Derivative API** and what you can do with it and also uses [Autodesk Viewer](https://developer.autodesk.com/en/docs/viewer/v2/overview/) for showing models. The front-end will look like:
 
-## Live demo
+![](www/img/indexpage.png)
 
-The sample is also available online at [https://modelderivative.herokuapp.com](https://modelderivative.herokuapp.com) 
+## Live version
+
+See it live at [https://forgemodelderivative.herokuapp.com](https://forgemodelderivative.herokuapp.com) 
 
 ## Setup
 
-1. Create a new application on [https://developer.autodesk.com](https://developer.autodesk.com) with "**CallBack URL**" set to "http://dev.example.com" and make a note of the "**Client ID**" and "**Client Secret**" keys of your application - you'll need them later
+In order to use this sample you need Autodesk developer credentials. Visit the [Forge Developer Portal](https://developer.autodesk.com), sign up for an account, then [create an app](https://developer.autodesk.com/myapps/create). For this new app, use <b>http://localhost:3000/api/forge/callback/oauth</b> as Callback URL. Finally take note of the <b>Client ID</b> and <b>Client Secret</b>.
 
-2. You need to have **Node.js** installed.  
-Just go to this address, download it and install it: [https://nodejs.org/en/](https://nodejs.org/en/)  
 
-3. You can download this sample multiple ways. Once you have it on your computer open terminal and just go to the folder in which the source code is, then run `npm install` - this will download additional components that the sample project needs 
-More info on how to do it: [https://docs.npmjs.com/cli/install](https://docs.npmjs.com/cli/install)
+### Run locally
 
-4. There were some changes concerning scopes which are not yet reflected in the `view-and-data` npm package used by this project. So for the time being the solution is to open `/node_modules/view-and-data/view-and-data.js` and add the scope info to the `params` variable in the `getToken` function like so:  
-  ```
-  var params = {
-      client_secret: config.credentials.ConsumerSecret,
-      client_id: config.credentials.ConsumerKey,
-      grant_type: 'client_credentials',
-      scope: 'data:read data:create data:write bucket:read bucket:create'
-    };
-  ```  
+Install [NodeJS](https://nodejs.org).
 
-5. Add this line in your computer's `/etc/hosts` file: `127.0.0.1	dev.example.com`  
-Here is some info on how to modify your "hosts" file: [https://support.rackspace.com/how-to/modify-your-hosts-file/](https://support.rackspace.com/how-to/modify-your-hosts-file/)
+Clone this project or download it. It's recommended to install [GitHub desktop](https://desktop.github.com/). To clone it via command line, use the following (<b>Terminal</b> on MacOSX/Linux, <b>Git Shell</b> on Windows):
 
-6. Set the Consumer Key, Consumer Secret keys and the Calllback URL of your app for the project. You could do it in multiple ways, but two of them are:  
-  a. Set the `consumerKey` and `consumerSecret` values in the `config-<env>.js` file that corresponds to the environment (PROD/STG/DEV) that you are testing in, plus set the `redirectUrl` in the config.js file  
-  b. Set the `CALLBACK_URL`, `PROD_CONSUMERKEY` and `PROD_CONSUMERSECRET` environment variables. You could do that e.g. by setting them when running the server app from the terminal like this:  
-  ```
-  PROD_CONSUMERKEY=<your cosumer key> PROD_CONSUMERSECRET=<your consumer secret key>
-  CALLBACK_URL='http://dev.example.com:8000/api/autodesk/callback' node index.js
-  ```  
+    git clone https://github.com/developer-autodesk/model.derivative-nodejs-sample
 
-7. Now you can run the app by executing the following in the terminal  
-  `node index.js`   
+To run it, install the required packages, set the enviroment variables with your client ID & secret and finally start it. Via command line, navigate to the folder where this repository was cloned and use the following:
 
-8. To test the app just open in the browser the following URL [http://dev.example.com:8000](http://dev.example.com:8000)
+Mac OSX/Linux (Terminal)
 
-## Usage
+    npm install
+    export FORGE_CLIENT_ID=<<YOUR CLIENT ID FROM FORGE DEVELOPER PORTAL>>
+    export FORGE_CLIENT_SECRET=<<YOUR FORGE CLIENT SECRET>>
+    export GOOGLE_CLIENT_ID=<<YOUR CLIENT ID FROM GOOGLE DEVELOPER>>
+    export GOOGLE_CLIENT_SECRET=<<YOUR GOOGLE CLIENT SECRET>>
+    npm run dev
 
-**You need to have an A360 account on the appropriate server (PROD, STG or DEV) - go to [https://myhub.autodesk360.com/](https://myhub.autodesk360.com/) to make sure you have a registered account before trying to use the sample**
+Windows (use <b>Node.js command line</b> from Start menu)
 
-1. Click the "SIGN IN" button and provide your A360 credentials
-2. Once the hubs and projects are shown in the browser tree on the left, drill down into the content to find a file you are interested in and select its version (the item with a clock icon)
-3. The selected file's content hierarchy will appear in the middle browser tree - and it will also be shown in the viewer on the right
-4. You can click on any model part and that will trigger the translation of it to an OBJ file
-5. When you clicked an item, its name in the tree will change based on the translation progress. You have to keep clicking to get an update on the translation status. If the translation is finished by the time you click the item again, then the OBJ file will get downloaded to your computer
+    npm install
+    set FORGE_CLIENT_ID=<<YOUR CLIENT ID FROM FORGE DEVELOPER PORTAL>>
+    set FORGE_CLIENT_SECRET=<<YOUR FORGE CLIENT SECRET>>
+    set GOOGLE_CLIENT_ID=<<YOUR CLIENT ID FROM GOOGLE DEVELOPER>>
+    set GOOGLE_CLIENT_SECRET=<<YOUR GOOGLE CLIENT SECRET>>
+    npm run dev
 
-You can also upload files to the web app's own bucket storage to use the **Model Derivative API** on them, just click the `Upload file` button. In case of uploading composite designs which consist of multiple components like an **Inventor** assembly and its parts, then the **zip** file's name needs to be the following: `<root design file's name'>.zip` - e.g. `scissors.iam.zip`  
+Open the browser: [http://localhost:3000](http://localhost:3000).
 
-Here is a video showing it in action: [http://www.youtube.com/watch?v=0o7o7NA69qk](http://www.youtube.com/watch?v=0o7o7NA69qk)
+<b>Important:</b> do not use <b>npm start</b> locally, this is intended for PRODUCTION only with HTTPS (SSL) secure cookies.
 
-## Deploy on Heroku
+### Deploy on Heroku
 
 To deploy this application to Heroku, the <b>Callback URL</b> & <b>redirect_uri</b> must use your .herokuapp.com address. After clicking on the button below, at the Heroku Create New App page, set your Client ID & Secret and the correct callback URL.
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/adamenagy/model.derivative.api-nodejs-sample)
 
-## License
+## Packages used
+
+All Autodesk Forge NPM packages are included by default, see complete list of what's available at [NPM website](https://www.npmjs.com/browse/keyword/autodesk). OAuth, Model Derivative and OSS are used. [Google Drive](https://developers.google.com/drive/v3/web/quickstart/nodejs) for NodeJS is [googleapis](https://www.npmjs.com/package/googleapis). Some other non-Autodesk packaged are used, including [express](https://www.npmjs.com/package/express) and its session/cookie middlewares ([express-session](https://www.npmjs.com/package/express-session) and [cookie-parser](https://www.npmjs.com/package/cookie-parser)) for user session handling. The front-end uses [bootsrap](https://www.npmjs.com/package/bootstrap) and [jquery](https://www.npmjs.com/package/jquery).
+
+# Tips & tricks
+
+For local development/testing, consider use [nodemon](https://www.npmjs.com/package/nodemon) package, which auto restart your node application after any modification on your code. To install it, use:
+
+    sudo npm install -g nodemon
+
+Then, instead of <b>npm run dev</b>, use the following:
+
+    npm run nodemon
+
+Which executes <b>nodemon server.js --ignore www/</b>, where the <b>--ignore</b> parameter indicates that the app should not restart if files under <b>www</b> folder are modified.
+
+## Troubleshooting
+
+After installing Github desktop for Windows, on the Git Shell, if you see a <b>*error setting certificate verify locations*</b> error, use the following:
+
+    git config --global http.sslverify "false"
+
+# License
 
 This sample is licensed under the terms of the [MIT License](http://opensource.org/licenses/MIT).
 Please see the [LICENSE](LICENSE) file for full details.
 
-
 ## Written by
 
-Adam Nagy and Shiya Luo (Forge Partner Development)<br />
+Adam Nagy (Forge Partner Development)<br />
 http://forge.autodesk.com<br />
