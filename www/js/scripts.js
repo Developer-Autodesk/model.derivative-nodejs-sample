@@ -1014,8 +1014,8 @@ function addSelectionListener(viewer) {
 }
 
 function loadDocument(viewer, documentId) {
-    Autodesk.Viewing.HTTP_REQUEST_HEADERS['x-ads-acm-namespace'] = 'WIPDM';
-    Autodesk.Viewing.HTTP_REQUEST_HEADERS['x-ads-acm-check-groups'] = 'true';
+    //Autodesk.Viewing.HTTP_REQUEST_HEADERS['x-ads-acm-namespace'] = 'WIPDM';
+    //Autodesk.Viewing.HTTP_REQUEST_HEADERS['x-ads-acm-check-groups'] = 'true';
 
     Autodesk.Viewing.Document.load(
         documentId,

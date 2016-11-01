@@ -118,7 +118,7 @@ function createNewItemVersion(projectId, folderId, fileName, objectId) {
                             _resolve(versionData.data.id);
                         })
                         .catch(function (error) {
-                            console.log('postItem: failed');
+                            console.log('postVersion: failed');
 
                             _reject(error);
                         });
@@ -395,6 +395,8 @@ function storageSpecData(fileName, folderId) {
         }
     };
 
+    console.log(storageSpecs);
+
     return storageSpecs;
 }
 
@@ -444,6 +446,15 @@ function itemSpecData(fileName, folderId, objectId) {
         }]
     };
 
+
+    if (fileName.endsWith(".iam.zip")) {
+        itemSpec.data[0].attributes.extension.type = "versions:autodesk.a360:CompositeDesign";
+        itemSpec.data[0].attributes.name = fileName.slice(0, -4);
+        itemSpec.included[0].attributes.name = fileName.slice(0, -4);
+    }
+
+    console.log(itemSpec);
+
     return itemSpec;
 }
 
@@ -477,6 +488,13 @@ function versionSpecData(fileName, itemId, objectId) {
             }
         }
     }
+
+    if (fileName.endsWith(".iam.zip")) {
+        versionSpec.data.attributes.extension.type = "versions:autodesk.a360:CompositeDesign";
+        versionSpec.data.attributes.name = fileName.slice(0, -4);
+    }
+
+    console.log(versionSpec);
 
     return versionSpec;
 }
