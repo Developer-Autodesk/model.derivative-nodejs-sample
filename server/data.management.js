@@ -18,6 +18,7 @@ var config = require('./config');
 
 var forgeDM = require('forge-data-management');
 var forgeOSS = require('forge-oss');
+var request = require('request');
 
 function setToken(forge, req, res) {
     var tokenSession = new token(req.session);
@@ -233,6 +234,7 @@ router.get('/attachments/:attachment', function (req, res) {
             var fileExt = versionData.data.attributes.fileType;
             var bucketKeyObjectName = getBucketKeyObjectName(storageId);
 
+            /*
             var objects = new forgeOSS.ObjectsApi();
             objects.getObject(bucketKeyObjectName.bucketKey, bucketKeyObjectName.objectName)
                 .then(function (data) {
@@ -244,6 +246,34 @@ router.get('/attachments/:attachment', function (req, res) {
                     console.log('getObject: failed');
                     res.status(error.statusCode).end('getObject: failed');
                 })
+
+             The below workaround is needed because the "encoding = null" is not added to the request
+                in the /forge-oss/src/ApiClient.js file's exports.prototype.callApi function
+             */
+            var tokenSession = new token(req.session);
+            request({
+                url: "https://developer.api.autodesk.com/oss/v2/buckets/" +
+                    encodeURIComponent(bucketKeyObjectName.bucketKey) +
+                    "/objects/" +
+                    encodeURIComponent(bucketKeyObjectName.objectName),
+                encoding: null,
+                method: "GET",
+                headers: {'Authorization': 'Bearer ' + tokenSession.getTokenInternal()}
+            }, function (error, response, body) {
+                if (error != null) {
+                    console.log(error); // connection problems
+
+                    if (body.errors != null)
+                        console.log(body.errors);
+
+                    res.status(error.statusCode).end(error.statusMessage);
+                    return;
+                }
+
+                res.set('content-type', 'application/' + fileExt);
+                res.set('Content-Disposition', 'attachment; filename="' + versionData.data.attributes.displayName + '"');
+                res.end(body);
+            })
         })
         .catch(function (error) {
             console.log('getVersion: failed');
@@ -500,6 +530,7 @@ function versionSpecData(fileName, itemId, objectId) {
 }
 
 function attachmentSpecData(versionId) {
+
     var attachmentSpec = {
         "jsonapi": {
             "version": "1.0"

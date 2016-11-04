@@ -228,7 +228,7 @@ function askForFileType(format, urn, guid, objectIds, rootFileName, fileExtType,
         'stl' : {
             "format": "binary",
             "exportColor": true,
-            "exportFileStructure": "multiple"
+            "exportFileStructure": "single" // "multiple" does not work
         },
         'obj' : {
             "modelGuid": guid,
