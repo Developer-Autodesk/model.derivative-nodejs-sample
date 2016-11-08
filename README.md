@@ -17,7 +17,7 @@ This sample shows how you can use the **Model Derivative API** and what you can 
 
 ## Live version
 
-See it live at [https://forgemodelderivative.herokuapp.com](https://forgemodelderivative.herokuapp.com) 
+See it live at [https://derivatives.autodesk.io](https://derivatives.autodesk.io) 
 
 ## Setup
 
@@ -39,8 +39,6 @@ Mac OSX/Linux (Terminal)
     npm install
     export FORGE_CLIENT_ID=<<YOUR CLIENT ID FROM FORGE DEVELOPER PORTAL>>
     export FORGE_CLIENT_SECRET=<<YOUR FORGE CLIENT SECRET>>
-    export GOOGLE_CLIENT_ID=<<YOUR CLIENT ID FROM GOOGLE DEVELOPER>>
-    export GOOGLE_CLIENT_SECRET=<<YOUR GOOGLE CLIENT SECRET>>
     npm run dev
 
 Windows (use <b>Node.js command line</b> from Start menu)
@@ -48,8 +46,6 @@ Windows (use <b>Node.js command line</b> from Start menu)
     npm install
     set FORGE_CLIENT_ID=<<YOUR CLIENT ID FROM FORGE DEVELOPER PORTAL>>
     set FORGE_CLIENT_SECRET=<<YOUR FORGE CLIENT SECRET>>
-    set GOOGLE_CLIENT_ID=<<YOUR CLIENT ID FROM GOOGLE DEVELOPER>>
-    set GOOGLE_CLIENT_SECRET=<<YOUR GOOGLE CLIENT SECRET>>
     npm run dev
 
 Open the browser: [http://localhost:3000](http://localhost:3000).
@@ -60,11 +56,11 @@ Open the browser: [http://localhost:3000](http://localhost:3000).
 
 To deploy this application to Heroku, the <b>Callback URL</b> & <b>redirect_uri</b> must use your .herokuapp.com address. After clicking on the button below, at the Heroku Create New App page, set your Client ID & Secret and the correct callback URL.
 
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/adamenagy/model.derivative-nodejs-sample)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/Developer-Autodesk/model.derivative-nodejs-sample)
 
 ## Packages used
 
-All Autodesk Forge NPM packages are included by default, see complete list of what's available at [NPM website](https://www.npmjs.com/browse/keyword/autodesk). OAuth, Model Derivative and OSS are used. [Google Drive](https://developers.google.com/drive/v3/web/quickstart/nodejs) for NodeJS is [googleapis](https://www.npmjs.com/package/googleapis). Some other non-Autodesk packaged are used, including [express](https://www.npmjs.com/package/express) and its session/cookie middlewares ([express-session](https://www.npmjs.com/package/express-session) and [cookie-parser](https://www.npmjs.com/package/cookie-parser)) for user session handling. The front-end uses [bootsrap](https://www.npmjs.com/package/bootstrap) and [jquery](https://www.npmjs.com/package/jquery).
+All Autodesk Forge NPM packages are included by default, see complete list of what's available at [NPM website](https://www.npmjs.com/browse/keyword/autodesk). OAuth, Model Derivative and OSS are used. Some other non-Autodesk packaged are used, including [express](https://www.npmjs.com/package/express) and its session/cookie middlewares ([express-session](https://www.npmjs.com/package/express-session) and [cookie-parser](https://www.npmjs.com/package/cookie-parser)) for user session handling. The front-end uses [bootsrap](https://www.npmjs.com/package/bootstrap) and [jquery](https://www.npmjs.com/package/jquery).
 
 # Tips & tricks
 
